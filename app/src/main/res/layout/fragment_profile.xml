@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".ui.ProfileFragment">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp">
+
+        <!-- Botón de Retroceso (Placeholder) -->
+        <!-- Nota: En una app real, la AppBar o Toolbar se encarga de esto -->
+
+        <ImageView
+            android:id="@+id/back_arrow"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="12dp"
+            android:contentDescription="Back"
+            android:src="@android:drawable/ic_media_previous"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="?android:textColorPrimary" />
+
+        <TextView
+            android:id="@+id/user_profile_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="User Profile"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:layout_marginStart="16dp"
+            app:layout_constraintStart_toEndOf="@id/back_arrow"
+            app:layout_constraintTop_toTopOf="@id/back_arrow"
+            app:layout_constraintBottom_toBottomOf="@id/back_arrow"/>
+
+        <!-- Imagen de Perfil -->
+        <!-- Nota: Reemplaza con un placeholder de imagen de perfil si tienes -->
+
+        <!-- Tags/Badges (Ejemplo con TextViews, podrías usar Chips) -->
+
+        <ImageView
+            android:id="@+id/profile_image"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:layout_marginTop="16dp"
+            android:contentDescription="Profile Image"
+            android:src="@drawable/santiago"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/user_profile_title" />
+
+        <TextView
+            android:id="@+id/profile_name"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="4dp"
+            android:text="Santiago Gómez"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.0"
+            app:layout_constraintStart_toEndOf="@id/profile_image"
+            app:layout_constraintTop_toTopOf="@id/profile_image" />
+
+        <TextView
+            android:id="@+id/tag_rookie"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Rookie"
+            android:background="#DDDDDD"
+            android:padding="4dp"
+            android:layout_marginTop="4dp"
+            app:layout_constraintStart_toStartOf="@id/profile_name"
+            app:layout_constraintTop_toBottomOf="@id/profile_name"/>
+
+        <TextView
+            android:id="@+id/tag_football"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Football"
+            android:background="#DDDDDD"
+            android:padding="4dp"
+            android:layout_marginStart="8dp"
+            app:layout_constraintStart_toEndOf="@id/tag_rookie"
+            app:layout_constraintTop_toTopOf="@id/tag_rookie"/>
+
+        <!-- Estrellas (Placeholder con un TextView) -->
+
+        <TextView
+            android:id="@+id/profile_rating"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="★★★★☆"
+            android:textSize="16sp"
+            app:layout_constraintStart_toStartOf="@id/tag_rookie"
+            app:layout_constraintTop_toBottomOf="@id/tag_rookie" />
+
+        <!-- Botón Editar Perfil -->
+        <!-- Nota: Cambia el backgroundTint al color verde de tu diseño -->
+
+        <!-- Upcoming Events -->
+
+        <!-- Ejemplo de un item de evento (repetirías esto o usarías un RecyclerView) -->
+
+        <TextView
+            android:id="@+id/profile_bio"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Football enthusiast with a ton of free time :)"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.0"
+            app:layout_constraintStart_toStartOf="@id/profile_rating"
+            app:layout_constraintTop_toBottomOf="@id/profile_rating" />
+
+        <Button
+            android:id="@+id/edit_profile_button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:backgroundTint="#4CAF50"
+            android:text="Edit Profile"
+            android:textColor="@android:color/white"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.0"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/profile_bio" />
+
+        <TextView
+            android:id="@+id/upcoming_events_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="36dp"
+            android:text="Upcoming Events"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/edit_profile_button" />
+
+        <TextView
+            android:id="@+id/event_item_1_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="Mazurén Park Meeting"
+            app:layout_constraintEnd_toStartOf="@+id/event_item_1_button"
+            app:layout_constraintHorizontal_bias="0.0"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/upcoming_events_title" />
+
+        <Button
+            android:id="@+id/event_item_1_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="View event"
+            android:backgroundTint="#4CAF50"
+            android:textColor="@android:color/white"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/event_item_1_title"
+            app:layout_constraintBottom_toBottomOf="@id/event_item_1_title"/>
+        <!-- Nota: Para multiples items, un RecyclerView es lo ideal. Por ahora, duplicamos para el mock. -->
+
+
+        <TextView
+            android:id="@+id/event_item_2_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="40dp"
+            android:text="Cedritos Match"
+            app:layout_constraintEnd_toStartOf="@+id/event_item_2_button"
+            app:layout_constraintHorizontal_bias="0.0"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/event_item_1_title" />
+
+        <Button
+            android:id="@+id/event_item_2_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="View event"
+            android:backgroundTint="#4CAF50"
+            android:textColor="@android:color/white"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/event_item_2_title"
+            app:layout_constraintBottom_toBottomOf="@id/event_item_2_title"/>
+
+
+        <!-- Posted Events -->
+
+        <TextView
+            android:id="@+id/event_item_3_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="40dp"
+            android:text="Football 5"
+            app:layout_constraintEnd_toStartOf="@+id/event_item_3_button"
+            app:layout_constraintHorizontal_bias="0.0"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/event_item_2_title" />
+
+        <Button
+            android:id="@+id/event_item_3_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:backgroundTint="#4CAF50"
+            android:text="View event"
+            android:textColor="@android:color/white"
+            app:layout_constraintBottom_toBottomOf="@id/event_item_3_title"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/event_item_3_title"
+            app:layout_constraintVertical_bias="0.448" />
+
+        <TextView
+            android:id="@+id/posted_events_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="32dp"
+            android:text="Posted Events"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/event_item_3_button" />
+        <!-- Puedes añadir items de eventos posteados aquí de forma similar -->
+
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.core.widget.NestedScrollView>
+    
