@@ -71,7 +71,7 @@ class LoginFragment : Fragment() {
 
         // Navegación: entrar siempre al home y eliminar login del back stack
         loginButton.setOnClickListener {
-            findNavController().navigate(R.id.action_loginFragment_to_homeFragment)
+            findNavController().navigate(R.id.action_loginFragment_to_mainFragment)
         }
 
         forgotPasswordText.setOnClickListener { /* UI only */ }
