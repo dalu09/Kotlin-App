@@ -1,4 +1,4 @@
-package com.example.kotlinapp.ui.login
+package com.example.kotlinapp.ui.signup
 
 import android.os.Bundle
 import android.text.method.PasswordTransformationMethod
@@ -13,39 +13,35 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import com.example.kotlinapp.R
 
-class LoginFragment : Fragment() {
+class SignupFragment : Fragment() {
 
-    private lateinit var viewModel: LoginViewModel
+    private lateinit var viewModel: SignupViewModel
 
     private lateinit var emailEdit: EditText
     private lateinit var passwordEdit: EditText
     private lateinit var passwordToggle: ImageButton
-    private lateinit var loginButton: Button
+    private lateinit var signupButton: Button
     private lateinit var forgotPasswordText: TextView
-    private lateinit var signUpText: TextView
     private lateinit var logoImage: ImageView
     private lateinit var titleText: TextView
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? = inflater.inflate(R.layout.fragment_login, container, false)
+    ): View? = inflater.inflate(R.layout.fragment_signup, container, false)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        viewModel = ViewModelProvider(this).get(LoginViewModel::class.java)
-
+        viewModel = ViewModelProvider(this).get(SignupViewModel::class.java)
 
         logoImage = view.findViewById(R.id.logoImage)
         titleText = view.findViewById(R.id.appTitle)
         emailEdit = view.findViewById(R.id.editEmail)
         passwordEdit = view.findViewById(R.id.editPassword)
         passwordToggle = view.findViewById(R.id.btnPasswordToggle)
-        loginButton = view.findViewById(R.id.btnLogin)
+        signupButton = view.findViewById(R.id.btnContinue)
         forgotPasswordText = view.findViewById(R.id.txtForgot)
-        signUpText = view.findViewById(R.id.txtSignUp)
-
 
         viewModel.email.observe(viewLifecycleOwner) { current ->
             if (emailEdit.text.toString() != current) emailEdit.setText(current)
@@ -64,21 +60,14 @@ class LoginFragment : Fragment() {
             passwordEdit.setSelection(passwordEdit.text?.length ?: 0)
         }
 
-
         emailEdit.addTextChangedListener { text -> viewModel.onEmailChanged(text?.toString() ?: "") }
         passwordEdit.addTextChangedListener { text -> viewModel.onPasswordChanged(text?.toString() ?: "") }
         passwordToggle.setOnClickListener { viewModel.togglePasswordVisibility() }
 
-
-        loginButton.setOnClickListener {
-            findNavController().navigate(R.id.action_loginFragment_to_mainFragment)
+        signupButton.setOnClickListener {
+            findNavController().navigate(R.id.action_signupFragment_to_loginFragment)
         }
 
-        forgotPasswordText.setOnClickListener { /* Lógica para recuperar contraseña */ }
 
-
-        signUpText.setOnClickListener {
-            findNavController().navigate(R.id.action_loginFragment_to_signupFragment)
-        }
     }
 }
