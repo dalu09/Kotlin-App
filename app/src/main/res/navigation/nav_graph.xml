@@ -15,18 +15,31 @@
             app:destination="@id/mainFragment"
             app:popUpTo="@id/loginFragment"
             app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/action_loginFragment_to_signupFragment"
+            app:destination="@id/signupFragment" />
     </fragment>
 
     <fragment
-    android:id="@+id/mainFragment"
-    android:name="com.example.kotlinapp.ui.MainFragment"
-    android:label="Main"
-    tools:layout="@layout/fragment_main" />
+        android:id="@+id/signupFragment"
+        android:name="com.example.kotlinapp.ui.signup.SignupFragment"
+        android:label="Signup"
+        tools:layout="@layout/fragment_signup">
+        <action
+            android:id="@+id/action_signupFragment_to_loginFragment"
+            app:destination="@id/loginFragment" />
+    </fragment>
 
     <fragment
-    android:id="@+id/profileFragment"
-    android:name="com.example.kotlinapp.ui.ProfileFragment"
-    android:label="Profile"
-    tools:layout="@layout/fragment_profile" />
+        android:id="@+id/mainFragment"
+        android:name="com.example.kotlinapp.ui.MainFragment"
+        android:label="Main"
+        tools:layout="@layout/fragment_main" />
+
+    <fragment
+        android:id="@+id/profileFragment"
+        android:name="com.example.kotlinapp.ui.ProfileFragment"
+        android:label="Profile"
+        tools:layout="@layout/fragment_profile" />
 
 </navigation>
