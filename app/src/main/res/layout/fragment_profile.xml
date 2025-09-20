@@ -42,13 +42,14 @@
         <!-- Nota: Reemplaza con un placeholder de imagen de perfil si tienes -->
 
         <!-- Tags/Badges (Ejemplo con TextViews, podrías usar Chips) -->
+
         <ImageView
             android:id="@+id/profile_image"
             android:layout_width="100dp"
             android:layout_height="100dp"
-            android:layout_marginTop="48dp"
+            android:layout_marginTop="16dp"
             android:contentDescription="Profile Image"
-            android:src="@android:drawable/sym_def_app_icon"
+            android:src="@drawable/santiago"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/user_profile_title" />
 
@@ -97,8 +98,8 @@
             android:layout_marginTop="4dp"
             android:text="★★★★☆"
             android:textSize="16sp"
-            app:layout_constraintStart_toStartOf="@id:id/tag_rookie"
-            app:layout_constraintTop_toBottomOf="@id:id/tag_rookie" />
+            app:layout_constraintStart_toStartOf="@id/tag_rookie"
+            app:layout_constraintTop_toBottomOf="@id/tag_rookie" />
 
         <!-- Botón Editar Perfil -->
         <!-- Nota: Cambia el backgroundTint al color verde de tu diseño -->
@@ -111,10 +112,10 @@
             android:id="@+id/profile_bio"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="152dp"
+            android:layout_marginTop="8dp"
             android:text="Football enthusiast with a ton of free time :)"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="1.0"
+            app:layout_constraintHorizontal_bias="0.0"
             app:layout_constraintStart_toStartOf="@id/profile_rating"
             app:layout_constraintTop_toBottomOf="@id/profile_rating" />
 
@@ -122,7 +123,7 @@
             android:id="@+id/edit_profile_button"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="72dp"
+            android:layout_marginTop="20dp"
             android:backgroundTint="#4CAF50"
             android:text="Edit Profile"
             android:textColor="@android:color/white"
