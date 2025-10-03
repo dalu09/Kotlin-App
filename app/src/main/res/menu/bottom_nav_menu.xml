@@ -2,18 +2,18 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
         android:id="@+id/mainFragment"
-        android:icon="@android:drawable/ic_menu_mapmode"
+        android:icon="@drawable/ic_home_black_24dp"
         android:title="Home" />
     <item
         android:id="@+id/searchFragment"
-        android:icon="@android:drawable/ic_menu_search"
+        android:icon="@drawable/ic_search_24px"
         android:title="Search" />
     <item
         android:id="@+id/addEventFragment"
-        android:icon="@android:drawable/ic_menu_add"
+        android:icon="@drawable/ic_add_circle_24px"
         android:title="Add Event" />
     <item
         android:id="@+id/profileFragment"
-        android:icon="@android:drawable/ic_menu_myplaces"
+        android:icon="@drawable/person_24px"
         android:title="Profile" />
 </menu>
