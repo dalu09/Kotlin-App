@@ -7,23 +7,24 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import androidx.core.os.bundleOf
 import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import com.example.kotlinapp.R
+import com.example.kotlinapp.ui.signup.SignupViewModel.RegistrationState
 
 class SignupFragment : Fragment() {
 
     private lateinit var viewModel: SignupViewModel
 
+    // --- Vistas de la UI ---
     private lateinit var emailEdit: EditText
     private lateinit var passwordEdit: EditText
     private lateinit var passwordToggle: ImageButton
     private lateinit var signupButton: Button
-    private lateinit var forgotPasswordText: TextView
-    private lateinit var logoImage: ImageView
-    private lateinit var titleText: TextView
+    private lateinit var progressBar: ProgressBar
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -35,14 +36,14 @@ class SignupFragment : Fragment() {
 
         viewModel = ViewModelProvider(this).get(SignupViewModel::class.java)
 
-        logoImage = view.findViewById(R.id.logoImage)
-        titleText = view.findViewById(R.id.appTitle)
+        // --- Inicialización de Vistas ---
         emailEdit = view.findViewById(R.id.editEmail)
         passwordEdit = view.findViewById(R.id.editPassword)
         passwordToggle = view.findViewById(R.id.btnPasswordToggle)
         signupButton = view.findViewById(R.id.btnContinue)
-        forgotPasswordText = view.findViewById(R.id.txtForgot)
+        progressBar = view.findViewById(R.id.progressBar)
 
+        // --- Observadores y Listeners (sin cambios) ---
         viewModel.email.observe(viewLifecycleOwner) { current ->
             if (emailEdit.text.toString() != current) emailEdit.setText(current)
         }
@@ -63,11 +64,47 @@ class SignupFragment : Fragment() {
         emailEdit.addTextChangedListener { text -> viewModel.onEmailChanged(text?.toString() ?: "") }
         passwordEdit.addTextChangedListener { text -> viewModel.onPasswordChanged(text?.toString() ?: "") }
         passwordToggle.setOnClickListener { viewModel.togglePasswordVisibility() }
-
         signupButton.setOnClickListener {
-            findNavController().navigate(R.id.action_signupFragment_to_loginFragment)
+            viewModel.onSignupClicked()
         }
 
+        // --- Observador del estado de registro (MODIFICADO) ---
+        observeRegistrationState()
+    }
 
+    private fun observeRegistrationState() {
+        viewModel.registrationState.observe(viewLifecycleOwner) { state ->
+            when (state) {
+                is RegistrationState.Loading -> {
+                    progressBar.visibility = View.VISIBLE
+                    signupButton.isEnabled = false
+                }
+                // MODIFICADO: Ahora manejamos el nuevo estado de éxito `AuthSuccess`
+                is RegistrationState.AuthSuccess -> {
+                    progressBar.visibility = View.GONE
+                    signupButton.isEnabled = true
+                    Toast.makeText(context, "Cuenta creada. Completa tu perfil.", Toast.LENGTH_SHORT).show()
+
+                    // AÑADIDO: Preparamos el argumento para pasar el UID
+                    val bundle = bundleOf("user_uid" to state.uid)
+
+                    // AÑADIDO: Navegamos a la nueva pantalla de crear cuenta
+                    // Asegúrate de tener esta acción definida en tu `nav_graph.xml`
+                    findNavController().navigate(R.id.action_signupFragment_to_createAccountFragment, bundle)
+
+                    // AÑADIDO: Reseteamos el estado en el ViewModel
+                    viewModel.onNavigationComplete()
+                }
+                is RegistrationState.Error -> {
+                    progressBar.visibility = View.GONE
+                    signupButton.isEnabled = true
+                    Toast.makeText(context, "Error: ${state.message}", Toast.LENGTH_LONG).show()
+                }
+                is RegistrationState.Idle -> {
+                    progressBar.visibility = View.GONE
+                    signupButton.isEnabled = true
+                }
+            }
+        }
     }
 }
