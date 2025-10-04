@@ -21,4 +21,28 @@ class AuthRepository {
     suspend fun createUserProfileInFirestore(user: User) {
         firestore.collection("users").document(user.uid).set(user).await()
     }
+
+    // ---------------------Login--------------------
+    suspend fun signIn(email: String, password: String): FirebaseUser {
+        val authResult = firebaseAuth.signInWithEmailAndPassword(email.trim(), password).await()
+        return authResult.user ?: throw Exception("No fue posible iniciar sesión.")
+    }
+
+    suspend fun sendPasswordReset(email: String) {
+        firebaseAuth.sendPasswordResetEmail(email.trim()).await()
+    }
+
+    fun isLoggedIn(): Boolean = firebaseAuth.currentUser != null
+
+    fun currentUser(): FirebaseUser? = firebaseAuth.currentUser
+
+    fun currentUserId(): String? = firebaseAuth.currentUser?.uid
+
+    fun signOut() = firebaseAuth.signOut()
+
+    // Cargar el perfil desde Firestore después de login
+    suspend fun fetchUserProfile(uid: String): User? {
+        val snap = firestore.collection("users").document(uid).get().await()
+        return snap.toObject(User::class.java)
+    }
 }
