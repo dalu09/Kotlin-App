@@ -43,7 +43,14 @@ class SignupFragment : Fragment() {
         signupButton = view.findViewById(R.id.btnContinue)
         progressBar = view.findViewById(R.id.progressBar)
 
+
         // --- Observadores y Listeners (sin cambios) ---
+        val navOptions = androidx.navigation.NavOptions.Builder()
+            .setPopUpTo(R.id.loginFragment, inclusive = true)
+            .build()
+
+        findNavController().navigate(R.id.loginFragment, null, navOptions)
+
         viewModel.email.observe(viewLifecycleOwner) { current ->
             if (emailEdit.text.toString() != current) emailEdit.setText(current)
         }
