@@ -1,124 +1,151 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:fillViewport="true"
-    android:background="#FBF9F6"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="#FBF9F6">
 
-    <LinearLayout
-        android:padding="24dp"
-        android:orientation="vertical"
-        android:gravity="center_horizontal"
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
-
-        <Space
-            android:layout_width="match_parent"
-            android:layout_height="36dp" />
-
-        <ImageView
-            android:id="@+id/logoImage"
-            android:layout_width="120dp"
-            android:layout_height="120dp"
-            android:src="@drawable/logo"
-            android:contentDescription="Logo"
-            android:scaleType="centerInside" />
-
-        <TextView
-            android:id="@+id/appTitle"
-            android:layout_marginTop="8dp"
-            android:text="SportLink"
-            android:textSize="32sp"
-            android:textStyle="bold"
-            android:textColor="#31B179"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
-
-        <Space android:layout_height="32dp" android:layout_width="match_parent" />
-
-        <EditText
-            android:id="@+id/editEmail"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:background="@drawable/rounded_input_bg"
-            android:hint="Enter email"
-            android:padding="16dp"
-            android:inputType="textEmailAddress" />
-
-        <Space android:layout_height="12dp" android:layout_width="match_parent" />
-
-        <FrameLayout
-            android:layout_width="match_parent"
-            android:layout_height="56dp">
-
-            <EditText
-                android:id="@+id/editPassword"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="@drawable/rounded_input_bg"
-                android:hint="Enter password"
-                android:paddingStart="16dp"
-                android:paddingEnd="48dp"
-                android:inputType="textPassword"
-                android:gravity="center_vertical" />
-
-            <ImageButton
-                android:id="@+id/btnPasswordToggle"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:layout_gravity="end|center_vertical"
-                android:layout_marginEnd="6dp"
-                android:background="@android:color/transparent"
-                android:src="@drawable/ic_visibility_off"
-                android:contentDescription="Toggle password visibility" />
-        </FrameLayout>
-
-        <Space android:layout_height="20dp" android:layout_width="match_parent" />
-
-        <Button
-            android:id="@+id/btnContinue"
-            android:layout_width="match_parent"
-            android:layout_height="52dp"
-            android:backgroundTint="#31B179"
-            android:text="Continue"
-            android:textColor="#FFFFFF"
-            android:textSize="16sp"
-            android:layout_marginTop="4dp" />
-
-        <Space android:layout_height="16dp" android:layout_width="match_parent" />
-
-        <TextView
-            android:id="@+id/txtForgot"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Forgot Password?"
-            android:textColor="#444444"
-            android:textSize="14sp"
-            android:visibility="gone" /> <Space android:layout_height="6dp" android:layout_width="match_parent" />
+        android:layout_height="match_parent"
+        android:fillViewport="true">
 
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="36dp" />
+s
+            <ImageView
+                android:id="@+id/logoImage"
+                android:layout_width="120dp"
+                android:layout_height="120dp"
+                android:contentDescription="Logo"
+                android:scaleType="centerInside"
+                android:src="@drawable/logo" />
 
             <TextView
+                android:id="@+id/appTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Already have an account?"
-                android:textColor="#444444"
-                android:textSize="14sp" />
-
-            <TextView
-                android:id="@+id/txtSignIn"
-                android:layout_marginStart="6dp"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Sign In"
+                android:layout_marginTop="8dp"
+                android:text="SportLink"
                 android:textColor="#31B179"
-                android:textSize="14sp" />
+                android:textSize="32sp"
+                android:textStyle="bold" />
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="32dp" />
+
+            <EditText
+                android:id="@+id/editEmail"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:background="@drawable/rounded_input_bg"
+                android:hint="Enter email"
+                android:inputType="textEmailAddress"
+                android:padding="16dp" />
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="12dp" />
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="56dp">
+
+                <EditText
+                    android:id="@+id/editPassword"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/rounded_input_bg"
+                    android:gravity="center_vertical"
+                    android:hint="Enter password"
+                    android:inputType="textPassword"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="48dp" />
+
+                <ImageButton
+                    android:id="@+id/btnPasswordToggle"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_gravity="end|center_vertical"
+                    android:layout_marginEnd="6dp"
+                    android:background="@android:color/transparent"
+                    android:contentDescription="Toggle password visibility"
+                    android:src="@drawable/ic_visibility_off" />
+            </FrameLayout>
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="20dp" />
+
+            <Button
+                android:id="@+id/btnContinue"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="4dp"
+                android:backgroundTint="#31B179"
+                android:text="Continue"
+                android:textColor="#FFFFFF"
+                android:textSize="16sp" />
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="16dp" />
+
+            <TextView
+                android:id="@+id/txtForgot"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Forgot Password?"
+                android:textColor="#444444"
+                android:textSize="14sp"
+                android:visibility="gone" />
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="6dp" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Already have an account?"
+                    android:textColor="#444444"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/txtSignIn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:text="Sign In"
+                    android:textColor="#31B179"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="24dp" />
+
         </LinearLayout>
+    </ScrollView>
 
-        <Space android:layout_height="24dp" android:layout_width="match_parent" />
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:visibility="gone" />
 
-    </LinearLayout>
-</ScrollView>
+</FrameLayout>
