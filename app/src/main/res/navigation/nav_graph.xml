@@ -56,12 +56,26 @@
         android:id="@+id/mainFragment"
         android:name="com.example.kotlinapp.ui.mainView.MainFragment"
         android:label="Main"
-        tools:layout="@layout/fragment_main" />
+        tools:layout="@layout/fragment_main">
+        <action
+            android:id="@+id/action_mainFragment_to_eventDetailFragment"
+            app:destination="@id/eventDetailFragment" />
+    </fragment>
 
     <fragment
         android:id="@+id/profileFragment"
         android:name="com.example.kotlinapp.ui.profileTab.ProfileFragment"
         android:label="Profile"
         tools:layout="@layout/fragment_profile" />
+
+    <fragment
+        android:id="@+id/eventDetailFragment"
+        android:name="com.example.kotlinapp.ui.eventdetail.EventDetailFragment"
+        android:label="Event Detail"
+        tools:layout="@layout/fragment_event_detail">
+        <argument
+            android:name="event_id"
+            app:argType="string" />
+    </fragment>
 
 </navigation>
