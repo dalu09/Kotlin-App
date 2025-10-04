@@ -11,9 +11,6 @@
         android:layout_height="wrap_content"
         android:padding="16dp">
 
-        <!-- Botón de Retroceso (Placeholder) -->
-        <!-- Nota: En una app real, la AppBar o Toolbar se encarga de esto -->
-
         <ImageView
             android:id="@+id/back_arrow"
             android:layout_width="wrap_content"
@@ -21,7 +18,7 @@
             android:layout_marginStart="8dp"
             android:layout_marginTop="12dp"
             android:contentDescription="Back"
-            android:src="@android:drawable/ic_media_previous"
+            android:src="@drawable/ic_back"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:tint="?android:textColorPrimary" />
@@ -45,7 +42,7 @@
             android:layout_height="100dp"
             android:layout_marginTop="16dp"
             android:contentDescription="Profile Image"
-            android:src="@drawable/profle-default"
+            android:src="@drawable/profle_default"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/user_profile_title" />
 
@@ -55,7 +52,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
             android:layout_marginTop="4dp"
-            android:text="Santiago Gómez"
+            android:text="Username"
             android:textSize="20sp"
             android:textStyle="bold"
             app:layout_constraintEnd_toEndOf="parent"
@@ -87,19 +84,12 @@
             app:layout_constraintTop_toBottomOf="@id/sport_tags_group" />
 
 
-        <!-- Botón Editar Perfil -->
-        <!-- Nota: Cambia el backgroundTint al color verde de tu diseño -->
-
-        <!-- Upcoming Events -->
-
-        <!-- Ejemplo de un item de evento (repetirías esto o usarías un RecyclerView) -->
-
         <TextView
             android:id="@+id/profile_bio"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Football enthusiast with a ton of free time :)"
+            android:text="Biography"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintHorizontal_bias="0.0"
             app:layout_constraintStart_toStartOf="@id/profile_rating"
@@ -150,8 +140,6 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="@id/event_item_1_title"
             app:layout_constraintBottom_toBottomOf="@id/event_item_1_title"/>
-        <!-- Nota: Para multiples items, un RecyclerView es lo ideal. Por ahora, duplicamos para el mock. -->
-
 
         <TextView
             android:id="@+id/event_item_2_title"
@@ -175,8 +163,6 @@
             app:layout_constraintTop_toTopOf="@id/event_item_2_title"
             app:layout_constraintBottom_toBottomOf="@id/event_item_2_title"/>
 
-
-        <!-- Posted Events -->
 
         <TextView
             android:id="@+id/event_item_3_title"
@@ -212,8 +198,6 @@
             android:textStyle="bold"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/event_item_3_button" />
-        <!-- Puedes añadir items de eventos posteados aquí de forma similar -->
-
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.core.widget.NestedScrollView>

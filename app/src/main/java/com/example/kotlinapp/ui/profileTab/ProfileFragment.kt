@@ -10,8 +10,6 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import com.example.kotlinapp.R
-import com.google.android.material.chip.Chip
-import com.google.android.material.chip.ChipGroup
 
 class ProfileFragment : Fragment() {
     private val viewModel: ProfileViewModel by viewModels()
@@ -26,47 +24,39 @@ class ProfileFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Referencias a las vistas
         val usernameTextView: TextView = view.findViewById(R.id.profile_name)
         val descriptionTextView: TextView = view.findViewById(R.id.profile_bio)
-        val ratingTextView: TextView = view.findViewById(R.id.profile_rating)
-        // --- NUEVO: Referencia al ChipGroup ---
-        val sportTagsGroup: ChipGroup = view.findViewById(R.id.sport_tags_group)
-        // --- FIN DE LO NUEVO ---
+        val ratingTextView: TextView = view.findViewById(R.id.profile_rating) // Asumiendo que tienes un TextView para el rating
 
-        // Configurar los observadores
-        setupObservers(usernameTextView, descriptionTextView, ratingTextView, sportTagsGroup)
+        setupObservers(usernameTextView, descriptionTextView, ratingTextView)
 
-        // Iniciar la carga de los datos
         viewModel.loadUserProfile()
     }
 
     private fun setupObservers(
         usernameTextView: TextView,
         descriptionTextView: TextView,
-        ratingTextView: TextView,
-        sportTagsGroup: ChipGroup // --- NUEVO: Parámetro añadido ---
+        ratingTextView: TextView
     ) {
-        // ... observadores de username, description, avgRating, isLoading, error (sin cambios) ...
-        viewModel.username.observe(viewLifecycleOwner) { /* ... */ }
-        viewModel.description.observe(viewLifecycleOwner) { /* ... */ }
-        viewModel.avgRating.observe(viewLifecycleOwner) { /* ... */ }
+        viewModel.username.observe(viewLifecycleOwner) { username ->
+            usernameTextView.text = username ?: "Nombre no disponible"
+        }
 
-        // --- NUEVO: Observador para la lista de deportes ---
-        viewModel.sportList.observe(viewLifecycleOwner) { sports ->
-            // Limpia los chips anteriores antes de añadir nuevos
-            sportTagsGroup.removeAllViews()
+        viewModel.description.observe(viewLifecycleOwner) { description ->
+            descriptionTextView.text = description ?: "Sin descripción."
+        }
 
-            // Crea un Chip para cada deporte en la lista
-            sports.forEach { sportName ->
-                val chip = Chip(context) // Crea una nueva instancia de Chip
-                chip.text = sportName   // Asigna el nombre del deporte
-                chip.setChipBackgroundColorResource(R.color.gris) // Puedes personalizar el color
-                chip.isClickable = false // Para que no parezcan botones
-                chip.isCheckable = false
-                sportTagsGroup.addView(chip) // Añade el Chip al grupo
+        viewModel.avgRating.observe(viewLifecycleOwner) { avgRating ->
+
+            val ratingText = avgRating?.let { "★ %.1f".format(it) } ?: "Sin calificación"
+            ratingTextView.text = ratingText
+        }
+
+        viewModel.error.observe(viewLifecycleOwner) { errorMessage ->
+            errorMessage?.let {
+
+                Toast.makeText(context, it, Toast.LENGTH_LONG).show()
             }
         }
-        // --- FIN DE LO NUEVO ---
     }
 }
