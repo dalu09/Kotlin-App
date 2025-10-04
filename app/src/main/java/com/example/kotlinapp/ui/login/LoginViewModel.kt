@@ -7,7 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.kotlinapp.data.AuthRepository
 import kotlinx.coroutines.launch
 
-// Estados para manejar Loading/Éxito/Error en la UI
+
 sealed class LoginUiState {
     object Idle : LoginUiState()
     object Loading : LoginUiState()
@@ -66,7 +66,7 @@ class LoginViewModel : ViewModel() {
         }
     }
 
-    //Recuperar contraseña
+
     fun recoverPass() {
         val e = _email.value?.trim().orEmpty()
         if (e.isEmpty()) {

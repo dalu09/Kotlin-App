@@ -19,7 +19,6 @@ class SignupFragment : Fragment() {
 
     private lateinit var viewModel: SignupViewModel
 
-    // --- Vistas de la UI ---
     private lateinit var emailEdit: EditText
     private lateinit var passwordEdit: EditText
     private lateinit var passwordToggle: ImageButton
@@ -36,7 +35,6 @@ class SignupFragment : Fragment() {
 
         viewModel = ViewModelProvider(this).get(SignupViewModel::class.java)
 
-        // --- Inicialización de Vistas ---
         emailEdit = view.findViewById(R.id.editEmail)
         passwordEdit = view.findViewById(R.id.editPassword)
         passwordToggle = view.findViewById(R.id.btnPasswordToggle)
@@ -44,12 +42,6 @@ class SignupFragment : Fragment() {
         progressBar = view.findViewById(R.id.progressBar)
 
 
-        // --- Observadores y Listeners (sin cambios) ---
-        val navOptions = androidx.navigation.NavOptions.Builder()
-            .setPopUpTo(R.id.loginFragment, inclusive = true)
-            .build()
-
-        findNavController().navigate(R.id.loginFragment, null, navOptions)
 
         viewModel.email.observe(viewLifecycleOwner) { current ->
             if (emailEdit.text.toString() != current) emailEdit.setText(current)
@@ -75,7 +67,6 @@ class SignupFragment : Fragment() {
             viewModel.onSignupClicked()
         }
 
-        // --- Observador del estado de registro (MODIFICADO) ---
         observeRegistrationState()
     }
 
@@ -86,20 +77,15 @@ class SignupFragment : Fragment() {
                     progressBar.visibility = View.VISIBLE
                     signupButton.isEnabled = false
                 }
-                // MODIFICADO: Ahora manejamos el nuevo estado de éxito `AuthSuccess`
                 is RegistrationState.AuthSuccess -> {
                     progressBar.visibility = View.GONE
                     signupButton.isEnabled = true
                     Toast.makeText(context, "Cuenta creada. Completa tu perfil.", Toast.LENGTH_SHORT).show()
 
-                    // AÑADIDO: Preparamos el argumento para pasar el UID
                     val bundle = bundleOf("user_uid" to state.uid)
 
-                    // AÑADIDO: Navegamos a la nueva pantalla de crear cuenta
-                    // Asegúrate de tener esta acción definida en tu `nav_graph.xml`
                     findNavController().navigate(R.id.action_signupFragment_to_createAccountFragment, bundle)
 
-                    // AÑADIDO: Reseteamos el estado en el ViewModel
                     viewModel.onNavigationComplete()
                 }
                 is RegistrationState.Error -> {

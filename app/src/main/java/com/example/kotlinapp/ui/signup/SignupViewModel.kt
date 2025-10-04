@@ -52,10 +52,10 @@ class SignupViewModel : ViewModel() {
             try {
                 _registrationState.value = RegistrationState.Loading
 
-                // MODIFICADO: Llamamos a la nueva función que solo crea el usuario en Auth
+
                 val firebaseUser = authRepository.createUserInAuth(email, password)
 
-                // MODIFICADO: Notificamos éxito con el UID del nuevo usuario
+
                 _registrationState.value = RegistrationState.AuthSuccess(firebaseUser.uid)
 
             } catch (e: Exception) {
