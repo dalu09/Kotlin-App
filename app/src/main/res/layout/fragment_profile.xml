@@ -51,7 +51,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="0dp"
             android:text="Username"
             android:textSize="20sp"
             android:textStyle="bold"
@@ -60,35 +60,34 @@
             app:layout_constraintStart_toEndOf="@id/profile_image"
             app:layout_constraintTop_toTopOf="@id/profile_image" />
 
-        <!-- ChipGroup para los tags de deportes -->
         <com.google.android.material.chip.ChipGroup
             android:id="@+id/sport_tags_group"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.0"
             app:layout_constraintStart_toStartOf="@id/profile_name"
             app:layout_constraintTop_toBottomOf="@id/profile_name">
 
         </com.google.android.material.chip.ChipGroup>
 
-
         <TextView
             android:id="@+id/profile_rating"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
             android:layout_marginTop="4dp"
             android:text="★★★★☆"
             android:textSize="16sp"
             app:layout_constraintStart_toStartOf="@id/profile_name"
             app:layout_constraintTop_toBottomOf="@id/sport_tags_group" />
 
-
         <TextView
             android:id="@+id/profile_bio"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="4dp"
             android:text="Biography"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintHorizontal_bias="0.0"
@@ -99,7 +98,7 @@
             android:id="@+id/edit_profile_button"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
+            android:layout_marginTop="32dp"
             android:backgroundTint="#4CAF50"
             android:text="Edit Profile"
             android:textColor="@android:color/white"
