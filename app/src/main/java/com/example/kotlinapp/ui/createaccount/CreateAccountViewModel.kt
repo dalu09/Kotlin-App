@@ -37,7 +37,7 @@ class CreateAccountViewModel : ViewModel() {
                     username = username,
                     email = email,
                     description = description,
-                    sportList = sports // Se asigna directamente
+                    sportList = sports
                 )
 
                 authRepository.createUserProfileInFirestore(newUser)

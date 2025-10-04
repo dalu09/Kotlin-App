@@ -32,7 +32,7 @@ class CreateAccountFragment : Fragment() {
     private lateinit var descriptionEdit: EditText
     private lateinit var createAccountButton: Button
     private lateinit var progressBar: ProgressBar
-    // AÑADIDO: Nuevas vistas para la selección de deportes
+
     private lateinit var sportsSelector: TextView
     private lateinit var sportsChipGroup: ChipGroup
 
@@ -78,7 +78,7 @@ class CreateAccountFragment : Fragment() {
             val username = usernameEdit.text.toString()
             val description = descriptionEdit.text.toString()
 
-            // MODIFICADO: Pasamos la lista de deportes seleccionados al ViewModel
+
             viewModel.createAccount(uid, username, selectedSports.toList(), description)
         }
 
