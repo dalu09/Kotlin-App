@@ -11,9 +11,6 @@
         android:layout_height="wrap_content"
         android:padding="16dp">
 
-        <!-- Botón de Retroceso (Placeholder) -->
-        <!-- Nota: En una app real, la AppBar o Toolbar se encarga de esto -->
-
         <ImageView
             android:id="@+id/back_arrow"
             android:layout_width="wrap_content"
@@ -21,7 +18,7 @@
             android:layout_marginStart="8dp"
             android:layout_marginTop="12dp"
             android:contentDescription="Back"
-            android:src="@android:drawable/ic_media_previous"
+            android:src="@drawable/ic_back"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:tint="?android:textColorPrimary" />
@@ -38,10 +35,6 @@
             app:layout_constraintTop_toTopOf="@id/back_arrow"
             app:layout_constraintBottom_toBottomOf="@id/back_arrow"/>
 
-        <!-- Imagen de Perfil -->
-        <!-- Nota: Reemplaza con un placeholder de imagen de perfil si tienes -->
-
-        <!-- Tags/Badges (Ejemplo con TextViews, podrías usar Chips) -->
 
         <ImageView
             android:id="@+id/profile_image"
@@ -49,7 +42,7 @@
             android:layout_height="100dp"
             android:layout_marginTop="16dp"
             android:contentDescription="Profile Image"
-            android:src="@drawable/santiago"
+            android:src="@drawable/profle_default"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/user_profile_title" />
 
@@ -58,8 +51,8 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
-            android:layout_marginTop="4dp"
-            android:text="Santiago Gómez"
+            android:layout_marginTop="0dp"
+            android:text="Username"
             android:textSize="20sp"
             android:textStyle="bold"
             app:layout_constraintEnd_toEndOf="parent"
@@ -67,53 +60,35 @@
             app:layout_constraintStart_toEndOf="@id/profile_image"
             app:layout_constraintTop_toTopOf="@id/profile_image" />
 
-        <TextView
-            android:id="@+id/tag_rookie"
-            android:layout_width="wrap_content"
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/sport_tags_group"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="Rookie"
-            android:background="#DDDDDD"
-            android:padding="4dp"
             android:layout_marginTop="4dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.0"
             app:layout_constraintStart_toStartOf="@id/profile_name"
-            app:layout_constraintTop_toBottomOf="@id/profile_name"/>
+            app:layout_constraintTop_toBottomOf="@id/profile_name">
 
-        <TextView
-            android:id="@+id/tag_football"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Football"
-            android:background="#DDDDDD"
-            android:padding="4dp"
-            android:layout_marginStart="8dp"
-            app:layout_constraintStart_toEndOf="@id/tag_rookie"
-            app:layout_constraintTop_toTopOf="@id/tag_rookie"/>
-
-        <!-- Estrellas (Placeholder con un TextView) -->
+        </com.google.android.material.chip.ChipGroup>
 
         <TextView
             android:id="@+id/profile_rating"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
             android:layout_marginTop="4dp"
             android:text="★★★★☆"
             android:textSize="16sp"
-            app:layout_constraintStart_toStartOf="@id/tag_rookie"
-            app:layout_constraintTop_toBottomOf="@id/tag_rookie" />
-
-        <!-- Botón Editar Perfil -->
-        <!-- Nota: Cambia el backgroundTint al color verde de tu diseño -->
-
-        <!-- Upcoming Events -->
-
-        <!-- Ejemplo de un item de evento (repetirías esto o usarías un RecyclerView) -->
+            app:layout_constraintStart_toStartOf="@id/profile_name"
+            app:layout_constraintTop_toBottomOf="@id/sport_tags_group" />
 
         <TextView
             android:id="@+id/profile_bio"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Football enthusiast with a ton of free time :)"
+            android:layout_marginTop="4dp"
+            android:text="Biography"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintHorizontal_bias="0.0"
             app:layout_constraintStart_toStartOf="@id/profile_rating"
@@ -123,7 +98,7 @@
             android:id="@+id/edit_profile_button"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="32dp"
             android:backgroundTint="#4CAF50"
             android:text="Edit Profile"
             android:textColor="@android:color/white"
@@ -148,7 +123,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            android:text="Mazurén Park Meeting"
+            android:text="Event 1"
             app:layout_constraintEnd_toStartOf="@+id/event_item_1_button"
             app:layout_constraintHorizontal_bias="0.0"
             app:layout_constraintStart_toStartOf="parent"
@@ -164,15 +139,13 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="@id/event_item_1_title"
             app:layout_constraintBottom_toBottomOf="@id/event_item_1_title"/>
-        <!-- Nota: Para multiples items, un RecyclerView es lo ideal. Por ahora, duplicamos para el mock. -->
-
 
         <TextView
             android:id="@+id/event_item_2_title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="40dp"
-            android:text="Cedritos Match"
+            android:text="Event 2"
             app:layout_constraintEnd_toStartOf="@+id/event_item_2_button"
             app:layout_constraintHorizontal_bias="0.0"
             app:layout_constraintStart_toStartOf="parent"
@@ -190,14 +163,12 @@
             app:layout_constraintBottom_toBottomOf="@id/event_item_2_title"/>
 
 
-        <!-- Posted Events -->
-
         <TextView
             android:id="@+id/event_item_3_title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="40dp"
-            android:text="Football 5"
+            android:text="Event 3"
             app:layout_constraintEnd_toStartOf="@+id/event_item_3_button"
             app:layout_constraintHorizontal_bias="0.0"
             app:layout_constraintStart_toStartOf="parent"
@@ -226,8 +197,6 @@
             android:textStyle="bold"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/event_item_3_button" />
-        <!-- Puedes añadir items de eventos posteados aquí de forma similar -->
-
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.core.widget.NestedScrollView>
