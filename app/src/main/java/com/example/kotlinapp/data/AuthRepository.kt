@@ -22,7 +22,7 @@ class AuthRepository {
         firestore.collection("users").document(user.uid).set(user).await()
     }
 
-    // ---------------------Login--------------------
+
     suspend fun signIn(email: String, password: String): FirebaseUser {
         val authResult = firebaseAuth.signInWithEmailAndPassword(email.trim(), password).await()
         return authResult.user ?: throw Exception("No fue posible iniciar sesión.")
@@ -40,7 +40,7 @@ class AuthRepository {
 
     fun signOut() = firebaseAuth.signOut()
 
-    // Cargar el perfil desde Firestore después de login
+
     suspend fun fetchUserProfile(uid: String): User? {
         val snap = firestore.collection("users").document(uid).get().await()
         return snap.toObject(User::class.java)

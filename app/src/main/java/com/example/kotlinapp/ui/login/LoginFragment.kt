@@ -3,6 +3,7 @@ package com.example.kotlinapp.ui.login
 import android.os.Bundle
 import android.text.method.PasswordTransformationMethod
 import android.text.method.SingleLineTransformationMethod
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -10,7 +11,7 @@ import android.widget.*
 import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
-import androidx.navigation.fragment.findNavController
+import androidx.navigation.findNavController
 import com.example.kotlinapp.R
 
 class LoginFragment : Fragment() {
@@ -36,7 +37,6 @@ class LoginFragment : Fragment() {
 
         viewModel = ViewModelProvider(this).get(LoginViewModel::class.java)
 
-
         logoImage = view.findViewById(R.id.logoImage)
         emailEdit = view.findViewById(R.id.editEmail)
         passwordEdit = view.findViewById(R.id.editPassword)
@@ -57,7 +57,7 @@ class LoginFragment : Fragment() {
                 is LoginUiState.Success -> {
                     loginButton.isEnabled = true
                     loginButton.text = "Login"
-                    findNavController().navigate(R.id.action_loginFragment_to_mainFragment)
+                    view.findNavController().navigate(R.id.action_loginFragment_to_mainFragment)
                 }
 
                 is LoginUiState.Error -> {
@@ -85,11 +85,9 @@ class LoginFragment : Fragment() {
             passwordEdit.setSelection(passwordEdit.text?.length ?: 0)
         }
 
-
         emailEdit.addTextChangedListener { text -> viewModel.onEmailChanged(text?.toString() ?: "") }
         passwordEdit.addTextChangedListener { text -> viewModel.onPasswordChanged(text?.toString() ?: "") }
         passwordToggle.setOnClickListener { viewModel.togglePasswordVisibility() }
-
 
         loginButton.setOnClickListener {
             viewModel.login()
@@ -99,7 +97,15 @@ class LoginFragment : Fragment() {
 
 
         signUpText.setOnClickListener {
-            findNavController().navigate(R.id.signupFragment)
+            Log.d("LoginFragment_DEBUG", "Botón de Sign Up CLICADO. Intentando navegar...")
+            try {
+                it.findNavController().navigate(R.id.action_loginFragment_to_signupFragment)
+
+                Log.d("LoginFragment_DEBUG", "Llamada a navigate() EJECUTADA SIN ERRORES.")
+            } catch (e: Exception) {
+
+                Log.e("LoginFragment_DEBUG", "La navegación FALLÓ con una excepción:", e)
+            }
         }
     }
 }

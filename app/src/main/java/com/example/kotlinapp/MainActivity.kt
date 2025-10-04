@@ -1,6 +1,7 @@
 package com.example.kotlinapp
 
 import android.os.Bundle
+import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
@@ -17,6 +18,23 @@ class MainActivity : AppCompatActivity() {
         val navController = navHostFragment.navController
         val bottomNavView = findViewById<BottomNavigationView>(R.id.bottom_nav_view)
 
+
         bottomNavView.setupWithNavController(navController)
+
+
+        navController.addOnDestinationChangedListener { _, destination, _ ->
+
+            when (destination.id) {
+
+                R.id.mainFragment,
+                R.id.profileFragment -> {
+                    bottomNavView.visibility = View.VISIBLE
+                }
+
+                else -> {
+                    bottomNavView.visibility = View.GONE
+                }
+            }
+        }
     }
 }
