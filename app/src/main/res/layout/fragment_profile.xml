@@ -38,10 +38,6 @@
             app:layout_constraintTop_toTopOf="@id/back_arrow"
             app:layout_constraintBottom_toBottomOf="@id/back_arrow"/>
 
-        <!-- Imagen de Perfil -->
-        <!-- Nota: Reemplaza con un placeholder de imagen de perfil si tienes -->
-
-        <!-- Tags/Badges (Ejemplo con TextViews, podrías usar Chips) -->
 
         <ImageView
             android:id="@+id/profile_image"
@@ -49,7 +45,7 @@
             android:layout_height="100dp"
             android:layout_marginTop="16dp"
             android:contentDescription="Profile Image"
-            android:src="@drawable/santiago"
+            android:src="@drawable/profle-default"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/user_profile_title" />
 
@@ -67,29 +63,18 @@
             app:layout_constraintStart_toEndOf="@id/profile_image"
             app:layout_constraintTop_toTopOf="@id/profile_image" />
 
-        <TextView
-            android:id="@+id/tag_rookie"
-            android:layout_width="wrap_content"
+        <!-- ChipGroup para los tags de deportes -->
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/sport_tags_group"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="Rookie"
-            android:background="#DDDDDD"
-            android:padding="4dp"
             android:layout_marginTop="4dp"
+            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="@id/profile_name"
-            app:layout_constraintTop_toBottomOf="@id/profile_name"/>
+            app:layout_constraintTop_toBottomOf="@id/profile_name">
 
-        <TextView
-            android:id="@+id/tag_football"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Football"
-            android:background="#DDDDDD"
-            android:padding="4dp"
-            android:layout_marginStart="8dp"
-            app:layout_constraintStart_toEndOf="@id/tag_rookie"
-            app:layout_constraintTop_toTopOf="@id/tag_rookie"/>
+        </com.google.android.material.chip.ChipGroup>
 
-        <!-- Estrellas (Placeholder con un TextView) -->
 
         <TextView
             android:id="@+id/profile_rating"
@@ -98,8 +83,9 @@
             android:layout_marginTop="4dp"
             android:text="★★★★☆"
             android:textSize="16sp"
-            app:layout_constraintStart_toStartOf="@id/tag_rookie"
-            app:layout_constraintTop_toBottomOf="@id/tag_rookie" />
+            app:layout_constraintStart_toStartOf="@id/profile_name"
+            app:layout_constraintTop_toBottomOf="@id/sport_tags_group" />
+
 
         <!-- Botón Editar Perfil -->
         <!-- Nota: Cambia el backgroundTint al color verde de tu diseño -->
