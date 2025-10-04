@@ -38,7 +38,6 @@ class LoginFragment : Fragment() {
 
 
         logoImage = view.findViewById(R.id.logoImage)
-        titleText = view.findViewById(R.id.appTitle)
         emailEdit = view.findViewById(R.id.editEmail)
         passwordEdit = view.findViewById(R.id.editPassword)
         passwordToggle = view.findViewById(R.id.btnPasswordToggle)
@@ -46,6 +45,28 @@ class LoginFragment : Fragment() {
         forgotPasswordText = view.findViewById(R.id.txtForgot)
         signUpText = view.findViewById(R.id.txtSignUp)
 
+        viewModel.uiState.observe(viewLifecycleOwner) { state ->
+            when (state) {
+                is LoginUiState.Idle -> Unit
+
+                is LoginUiState.Loading -> {
+                    loginButton.isEnabled = false
+                    loginButton.text = "Ingresando..."
+                }
+
+                is LoginUiState.Success -> {
+                    loginButton.isEnabled = true
+                    loginButton.text = "Login"
+                    findNavController().navigate(R.id.action_loginFragment_to_mainFragment)
+                }
+
+                is LoginUiState.Error -> {
+                    loginButton.isEnabled = true
+                    loginButton.text = "Login"
+                    Toast.makeText(requireContext(), state.message, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
 
         viewModel.email.observe(viewLifecycleOwner) { current ->
             if (emailEdit.text.toString() != current) emailEdit.setText(current)
@@ -71,14 +92,14 @@ class LoginFragment : Fragment() {
 
 
         loginButton.setOnClickListener {
-            findNavController().navigate(R.id.action_loginFragment_to_mainFragment)
+            viewModel.login()
         }
 
-        forgotPasswordText.setOnClickListener { /* Lógica para recuperar contraseña */ }
+        forgotPasswordText.setOnClickListener { viewModel.recoverPass()}
 
 
         signUpText.setOnClickListener {
-            findNavController().navigate(R.id.action_loginFragment_to_signupFragment)
+            findNavController().navigate(R.id.signupFragment)
         }
     }
 }

@@ -19,28 +19,14 @@
             <Space
                 android:layout_width="match_parent"
                 android:layout_height="36dp" />
-s
+
             <ImageView
                 android:id="@+id/logoImage"
-                android:layout_width="120dp"
-                android:layout_height="120dp"
+                android:layout_width="155dp"
+                android:layout_height="139dp"
                 android:contentDescription="Logo"
                 android:scaleType="centerInside"
                 android:src="@drawable/logo" />
-
-            <TextView
-                android:id="@+id/appTitle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="SportLink"
-                android:textColor="#31B179"
-                android:textSize="32sp"
-                android:textStyle="bold" />
-
-            <Space
-                android:layout_width="match_parent"
-                android:layout_height="32dp" />
 
             <EditText
                 android:id="@+id/editEmail"
@@ -48,6 +34,8 @@ s
                 android:layout_height="56dp"
                 android:background="@drawable/rounded_input_bg"
                 android:hint="Enter email"
+                android:textColor="#444444"
+                android:textColorHint="#808080"
                 android:inputType="textEmailAddress"
                 android:padding="16dp" />
 
@@ -66,14 +54,16 @@ s
                     android:background="@drawable/rounded_input_bg"
                     android:gravity="center_vertical"
                     android:hint="Enter password"
+                    android:textColor="#444444"
+                    android:textColorHint="#808080"
                     android:inputType="textPassword"
                     android:paddingStart="16dp"
                     android:paddingEnd="48dp" />
 
                 <ImageButton
                     android:id="@+id/btnPasswordToggle"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
                     android:layout_gravity="end|center_vertical"
                     android:layout_marginEnd="6dp"
                     android:background="@android:color/transparent"
