@@ -6,13 +6,14 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.ViewModelProvider
+import androidx.fragment.app.viewModels
 import com.example.kotlinapp.R
 
 class EventDetailFragment : Fragment() {
 
-    private lateinit var viewModel: EventDetailViewModel
+    private val viewModel: EventDetailViewModel by viewModels()
 
     private lateinit var titleText: TextView
     private lateinit var descriptionText: TextView
@@ -27,24 +28,41 @@ class EventDetailFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        viewModel = ViewModelProvider(this).get(EventDetailViewModel::class.java)
-
         titleText = view.findViewById(R.id.eventTitle)
         descriptionText = view.findViewById(R.id.eventDescription)
         participantsText = view.findViewById(R.id.participants)
         progressBar = view.findViewById(R.id.progressParticipants)
 
-        viewModel.title.observe(viewLifecycleOwner) { title ->
-            titleText.text = title
+        setupObservers()
+
+        // Obtenemos el eventId directamente de los argumentos del fragmento
+        val eventId = arguments?.getString("event_id")
+        
+        if (eventId != null) {
+            viewModel.loadEvent(eventId)
+        } else {
+            // Si por alguna razón el ID no llega, mostramos un error
+            Toast.makeText(requireContext(), "Error: No se pudo encontrar el ID del evento.", Toast.LENGTH_LONG).show()
         }
-        viewModel.description.observe(viewLifecycleOwner) { description ->
-            descriptionText.text = description
+    }
+
+    private fun setupObservers() {
+        viewModel.event.observe(viewLifecycleOwner) { event ->
+            titleText.text = event.name
+            descriptionText.text = event.description
+            val participantsString = "${event.booked} / ${event.max_capacity} participantes"
+            participantsText.text = participantsString
+            if (event.max_capacity > 0) {
+                progressBar.progress = (100 * event.booked) / event.max_capacity
+            } else {
+                progressBar.progress = 0
+            }
         }
-        viewModel.participants.observe(viewLifecycleOwner) { participants ->
-            participantsText.text = participants
-        }
-        viewModel.progress.observe(viewLifecycleOwner) { progress ->
-            progressBar.progress = progress
+
+        viewModel.error.observe(viewLifecycleOwner) { error ->
+            error?.let {
+                Toast.makeText(requireContext(), it, Toast.LENGTH_LONG).show()
+            }
         }
     }
 }
