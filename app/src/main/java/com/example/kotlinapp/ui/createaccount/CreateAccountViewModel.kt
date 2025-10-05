@@ -4,7 +4,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.kotlinapp.data.repository.AuthRepository
+import com.example.kotlinapp.data.AuthRepository
 import com.example.kotlinapp.data.models.User
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
