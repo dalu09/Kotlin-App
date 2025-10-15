@@ -48,6 +48,7 @@
                 android:background="@drawable/rounded_input_bg"
                 android:hint="Enter username"
                 android:inputType="textPersonName"
+                android:maxLength="20"
                 android:padding="16dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
