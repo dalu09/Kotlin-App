@@ -68,7 +68,7 @@
         android:label="Profile"
         tools:layout="@layout/fragment_profile" />
 
-    <fragment
+    <dialog
         android:id="@+id/eventDetailFragment"
         android:name="com.example.kotlinapp.ui.eventdetail.EventDetailFragment"
         android:label="Event Detail"
@@ -76,6 +76,6 @@
         <argument
             android:name="event_id"
             app:argType="string" />
-    </fragment>
+    </dialog>
 
 </navigation>
