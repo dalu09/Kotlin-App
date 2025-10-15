@@ -1,4 +1,4 @@
-package com.example.kotlinapp.data
+package com.example.kotlinapp.data.repository
 
 import com.example.kotlinapp.data.models.User
 import com.google.firebase.auth.FirebaseAuth
