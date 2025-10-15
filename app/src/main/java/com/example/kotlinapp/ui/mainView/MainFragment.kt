@@ -2,6 +2,8 @@ package com.example.kotlinapp.ui.mainView
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -22,6 +24,8 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
+import com.google.android.gms.maps.model.BitmapDescriptor
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
@@ -77,17 +81,15 @@ class MainFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         if (eventId != null) {
             Log.i(TAG, "Marcador clickeado! Navegando al detalle del evento con ID: $eventId")
             
-            // Pasa los argumentos a través de un Bundle
             val bundle = Bundle().apply {
                 putString("event_id", eventId)
             }
-            // Navegamos al ID del destino con los argumentos
-            findNavController().navigate(R.id.eventDetailFragment, bundle)
+            findNavController().navigate(R.id.action_mainFragment_to_eventDetailFragment, bundle)
 
         } else {
             Log.w(TAG, "Marcador clickeado, pero no tiene un ID de evento en su tag.")
         }
-        // Return false to allow the default behavior (camera centers on marker & info window appears)
+        // Retorna 'false' para permitir el comportamiento por defecto: centrar la cámara y mostrar la ventana de información
         return false
     }
 
@@ -111,24 +113,38 @@ class MainFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         }
         Log.d(TAG, "Añadiendo ${events.size} eventos al mapa.")
         gMap?.clear()
+
+        val customMarkerIcon = bitmapDescriptorFromVector(R.drawable.icon_sl, 130, 130)
+
         events.forEach { event ->
             event.location?.let { geoPoint ->
                 val latLng = LatLng(geoPoint.latitude, geoPoint.longitude)
                 Log.d(TAG, "Añadiendo marcador para '${event.name}' (ID: ${event.id}) en Lat=${latLng.latitude}, Lon=${latLng.longitude}")
-                val marker = gMap?.addMarker(
-                    MarkerOptions()
-                        .position(latLng)
-                        .title(event.name)
-                        .snippet(event.description)
-                )
-                // Guardamos el ID del evento en el tag del marcador
+                
+                val markerOptions = MarkerOptions()
+                    .position(latLng)
+                    .title(event.name)
+
+                customMarkerIcon?.let { markerOptions.icon(it) }
+                
+                val marker = gMap?.addMarker(markerOptions)
                 marker?.tag = event.id
+
             } ?: run {
                 Log.w(TAG, "El evento '${event.name}' (ID: ${event.id}) fue recibido pero NO tiene ubicación (location es null).")
             }
         }
     }
 
+    private fun bitmapDescriptorFromVector(vectorResId: Int, width: Int, height: Int): BitmapDescriptor? {
+        return ContextCompat.getDrawable(requireContext(), vectorResId)?.let {
+            it.setBounds(0, 0, width, height)
+            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            it.draw(canvas)
+            BitmapDescriptorFactory.fromBitmap(bitmap)
+        }
+    }
     private fun enableMyLocation() {
         if (gMap == null) return
         Log.d(TAG, "enableMyLocation: Verificando permisos de ubicación.")

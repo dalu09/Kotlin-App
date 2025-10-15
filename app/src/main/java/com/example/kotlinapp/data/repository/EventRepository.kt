@@ -1,11 +1,12 @@
 package com.example.kotlinapp.data.repository
 
 import android.location.Location
+import android.os.Bundle
 import android.util.Log
 import com.example.kotlinapp.data.models.Event
 import com.example.kotlinapp.data.models.Venue
+import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.analytics.ktx.analytics
-import com.google.firebase.analytics.ktx.logEvent
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.GeoPoint
@@ -24,6 +25,8 @@ class EventRepository {
     companion object { private const val TAG = "EventRepository" }
 
     private val db: FirebaseFirestore = FirebaseFirestore.getInstance()
+    // Instancia de Analytics
+    private val analytics: FirebaseAnalytics = Firebase.analytics
 
     suspend fun getEventById(eventId: String): Result<Event> {
         return try {
@@ -67,11 +70,18 @@ class EventRepository {
     }
 
     suspend fun createBooking(eventId: String, userId: String): Result<Unit> {
+
+        //Enviar el evento a Analytics
+        val bundle = Bundle()
+        bundle.putString(FirebaseAnalytics.Param.ITEM_ID, eventId)
+        bundle.putString("user_id", userId)
+        analytics.logEvent("booking_completed", bundle)
+
         return try {
             val eventRef = db.collection("events").document(eventId)
             val userRef = db.collection("users").document(userId)
 
-            // Previene que un usuario reserve el mismo evento dos veces
+            // Evitar reservas duplicadas
             val alreadyBookedQuery = db.collection("booked")
                 .whereEqualTo("eventId", eventRef)
                 .whereEqualTo("userId", userRef)
@@ -82,9 +92,7 @@ class EventRepository {
                 return Result.failure(Exception("Ya has reservado este evento."))
             }
 
-            // Transacción para crear la reserva y marcar al usuario como activo del mes
             db.runTransaction { transaction ->
-                // Crea el documento de reserva en la colección 'booked'
                 val newBookingRef = db.collection("booked").document()
                 val bookingData = mapOf(
                     "eventId" to eventRef,
@@ -93,29 +101,22 @@ class EventRepository {
                 )
                 transaction.set(newBookingRef, bookingData)
 
-                // Marca al usuario como único para el mes actual.
                 val yyyyMM = SimpleDateFormat("yyyyMM", Locale.getDefault()).format(Date())
                 val monthlyUniqueUserRef = db.collection("monthly_unique_bookers")
                     .document(yyyyMM)
                     .collection("users")
                     .document(userId)
 
-                // SetOptions.merge() crea el documento una vez por mes por usuario.
                 val firstBookingMark = mapOf(
                     "first_booking_at" to FieldValue.serverTimestamp()
                 )
                 transaction.set(monthlyUniqueUserRef, firstBookingMark, SetOptions.merge())
 
-                null // La transacción fue exitosa
+                null
             }.await()
 
-            // Envía una señal a Google Analytics
-            Firebase.analytics.logEvent("booking_completed") {
-                param("event_id", eventId)
-                param("user_id", userId)
-            }
-
             Result.success(Unit)
+
         } catch (e: Exception) {
             Log.e(TAG, "Error al crear la reserva: ${e.message}", e)
             Result.failure(e)
