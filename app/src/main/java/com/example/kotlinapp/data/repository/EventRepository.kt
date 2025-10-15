@@ -4,92 +4,120 @@ import android.location.Location
 import android.util.Log
 import com.example.kotlinapp.data.models.Event
 import com.example.kotlinapp.data.models.Venue
+import com.google.firebase.analytics.ktx.analytics
+import com.google.firebase.analytics.ktx.logEvent
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.GeoPoint
+import com.google.firebase.firestore.SetOptions
+import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.tasks.await
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class EventRepository {
 
-    companion object {
-        private const val TAG = "EventRepository"
-    }
+    companion object { private const val TAG = "EventRepository" }
 
-    private val db = FirebaseFirestore.getInstance()
+    private val db: FirebaseFirestore = FirebaseFirestore.getInstance()
 
     suspend fun getEventById(eventId: String): Result<Event> {
         return try {
             val snapshot = db.collection("events").document(eventId).get().await()
             val event = snapshot.toObject(Event::class.java)
-            if (event != null) {
-                Result.success(event)
-            } else {
-                Result.failure(Exception("Evento no encontrado"))
-            }
+            if (event != null) Result.success(event)
+            else Result.failure(Exception("Evento no encontrado"))
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
     suspend fun getNearbyEvents(userLocation: GeoPoint, radiusInMeters: Double): Result<List<Event>> {
-        Log.d(TAG, "Iniciando búsqueda de eventos cercanos...")
         return try {
             val eventsSnapshot = db.collection("events").get().await()
             val events = eventsSnapshot.toObjects(Event::class.java)
-            Log.d(TAG, "Paso 1: Se encontraron ${events.size} eventos en total en la colección 'events'.")
 
             val eventsWithLocations = coroutineScope {
                 events.map { event ->
                     async {
-                        if (event.venueid == null) {
-                            Log.w(TAG, "El evento '${event.name}' no tiene un campo 'venueid'. Saltando.")
-                        } else {
-                            Log.d(TAG, "Paso 2: Procesando evento '${event.name}'. Buscando su venue...")
-                            try {
-                                val venueSnapshot = event.venueid.get().await()
-                                if (!venueSnapshot.exists()) {
-                                    Log.e(TAG, "¡ERROR! La referencia 'venueid' para '${event.name}' apunta a un documento que NO EXISTE.")
-                                } else {
-                                    val venue = venueSnapshot.toObject(Venue::class.java)
-                                    if (venue != null) {
-                                        Log.i(TAG, "Paso 3: ¡Éxito! Venue '${venue.name}' encontrado para el evento '${event.name}'. Creando GeoPoint.")
-                                        event.location = GeoPoint(venue.latitude, venue.longitude)
-                                    } else {
-                                        Log.e(TAG, "¡ERROR! Se encontró el documento del venue para '${event.name}', pero no se pudo convertir al objeto Venue. Revisa los campos.")
-                                    }
-                                }
-                            } catch (e: Exception) {
-                                Log.e(TAG, "¡ERROR CRÍTICO! Falló la obtención del venue para '${event.name}'. Causa: ${e.message}", e)
-                                event.location = null
-                            }
+                        event.venueid?.get()?.await()?.toObject(Venue::class.java)?.let { venue ->
+                            event.location = GeoPoint(venue.latitude, venue.longitude)
                         }
                         event
                     }
                 }.awaitAll()
             }
 
-            val nearbyEvents = eventsWithLocations.filter { event ->
-                event.location?.let { eventLocation ->
-                    val distance = FloatArray(1)
-                    Location.distanceBetween(
-                        userLocation.latitude,
-                        userLocation.longitude,
-                        eventLocation.latitude,
-                        eventLocation.longitude,
-                        distance
-                    )
-                    val isNearby = distance[0] <= radiusInMeters
-                    if(isNearby) Log.d(TAG, "Paso 4: El evento '${event.name}' ESTÁ CERCA.")
-                    else Log.w(TAG, "Paso 4: El evento '${event.name}' está demasiado lejos (${distance[0]/1000} km). Descartado.")
-                    isNearby
+            val nearby = eventsWithLocations.filter { event ->
+                event.location?.let { loc ->
+                    val d = FloatArray(1)
+                    Location.distanceBetween(userLocation.latitude, userLocation.longitude, loc.latitude, loc.longitude, d)
+                    d[0] <= radiusInMeters
                 } ?: false
             }
-            Log.i(TAG, "Paso 5: Búsqueda finalizada. Número de eventos cercanos encontrados: ${nearbyEvents.size}")
-            Result.success(nearbyEvents)
+            Result.success(nearby)
         } catch (e: Exception) {
-            Log.e(TAG, "¡ERROR FATAL! La consulta inicial a la colección 'events' falló. Causa: ${e.message}", e)
+            Log.e(TAG, "Fallo consulta de eventos: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun createBooking(eventId: String, userId: String): Result<Unit> {
+        return try {
+            val eventRef = db.collection("events").document(eventId)
+            val userRef = db.collection("users").document(userId)
+
+            // Previene que un usuario reserve el mismo evento dos veces
+            val alreadyBookedQuery = db.collection("booked")
+                .whereEqualTo("eventId", eventRef)
+                .whereEqualTo("userId", userRef)
+                .limit(1)
+                .get().await()
+
+            if (!alreadyBookedQuery.isEmpty) {
+                return Result.failure(Exception("Ya has reservado este evento."))
+            }
+
+            // Transacción para crear la reserva y marcar al usuario como activo del mes
+            db.runTransaction { transaction ->
+                // Crea el documento de reserva en la colección 'booked'
+                val newBookingRef = db.collection("booked").document()
+                val bookingData = mapOf(
+                    "eventId" to eventRef,
+                    "userId" to userRef,
+                    "timestamp" to FieldValue.serverTimestamp()
+                )
+                transaction.set(newBookingRef, bookingData)
+
+                // Marca al usuario como único para el mes actual.
+                val yyyyMM = SimpleDateFormat("yyyyMM", Locale.getDefault()).format(Date())
+                val monthlyUniqueUserRef = db.collection("monthly_unique_bookers")
+                    .document(yyyyMM)
+                    .collection("users")
+                    .document(userId)
+
+                // SetOptions.merge() crea el documento una vez por mes por usuario.
+                val firstBookingMark = mapOf(
+                    "first_booking_at" to FieldValue.serverTimestamp()
+                )
+                transaction.set(monthlyUniqueUserRef, firstBookingMark, SetOptions.merge())
+
+                null // La transacción fue exitosa
+            }.await()
+
+            // Envía una señal a Google Analytics
+            Firebase.analytics.logEvent("booking_completed") {
+                param("event_id", eventId)
+                param("user_id", userId)
+            }
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error al crear la reserva: ${e.message}", e)
             Result.failure(e)
         }
     }
