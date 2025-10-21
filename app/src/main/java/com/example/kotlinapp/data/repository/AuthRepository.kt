@@ -1,48 +1,47 @@
 package com.example.kotlinapp.data.repository
 
 import com.example.kotlinapp.data.models.User
-import com.google.firebase.auth.FirebaseAuth
+import com.example.kotlinapp.data.serviceadapter.AuthServiceAdapter
 import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.tasks.await
 
 class AuthRepository {
 
-    private val firebaseAuth = FirebaseAuth.getInstance()
-    private val firestore = FirebaseFirestore.getInstance()
+
+    private val authService = AuthServiceAdapter()
 
 
     suspend fun createUserInAuth(email: String, password: String): FirebaseUser {
-        val authResult = firebaseAuth.createUserWithEmailAndPassword(email, password).await()
-        return authResult.user ?: throw Exception("Error al crear el usuario en Authentication.")
+        return authService.createUserInAuth(email, password)
     }
 
-
     suspend fun createUserProfileInFirestore(user: User) {
-        firestore.collection("users").document(user.uid).set(user).await()
+        authService.createUserProfileInFirestore(user)
     }
 
 
     suspend fun signIn(email: String, password: String): FirebaseUser {
-        val authResult = firebaseAuth.signInWithEmailAndPassword(email.trim(), password).await()
-        return authResult.user ?: throw Exception("No fue posible iniciar sesión.")
+        return authService.signIn(email, password)
     }
+
 
     suspend fun sendPasswordReset(email: String) {
-        firebaseAuth.sendPasswordResetEmail(email.trim()).await()
+        authService.sendPasswordReset(email)
     }
 
-    fun isLoggedIn(): Boolean = firebaseAuth.currentUser != null
 
-    fun currentUser(): FirebaseUser? = firebaseAuth.currentUser
+    fun isLoggedIn(): Boolean = authService.isLoggedIn()
 
-    fun currentUserId(): String? = firebaseAuth.currentUser?.uid
 
-    fun signOut() = firebaseAuth.signOut()
+    fun currentUser(): FirebaseUser? = authService.currentUser()
+
+
+    fun currentUserId(): String? = authService.currentUserId()
+
+
+    fun signOut() = authService.signOut()
 
 
     suspend fun fetchUserProfile(uid: String): User? {
-        val snap = firestore.collection("users").document(uid).get().await()
-        return snap.toObject(User::class.java)
+        return authService.fetchUserProfile(uid)
     }
 }
