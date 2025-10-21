@@ -1,6 +1,6 @@
 package com.example.kotlinapp.data.service
 
-import com.example.kotlinapp.data.models.User // Asegúrate de tener este modelo
+import com.example.kotlinapp.data.models.User
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
@@ -20,7 +20,7 @@ class ProfileServiceAdapter {
         val listenerRegistration = db.collection("users").document(uid)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    // Cierra el Flow con un error si algo sale mal
+                    // Cierra el Flow
                     close(error)
                     return@addSnapshotListener
                 }
@@ -28,16 +28,6 @@ class ProfileServiceAdapter {
                 trySend(snapshot?.toObject(User::class.java))
             }
 
-
         awaitClose { listenerRegistration.remove() }
     }
 }
-
-data class User(
-    val uid: String = "",
-    val username: String? = null,
-    val description: String? = null,
-    val avgRating: Double = 0.0,
-    val numRating: Long = 0,
-    val sportList: List<String> = emptyList()
-)
