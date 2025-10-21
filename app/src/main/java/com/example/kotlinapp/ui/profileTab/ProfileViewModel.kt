@@ -3,83 +3,53 @@ package com.example.kotlinapp.ui.profileTab
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.ListenerRegistration
+import androidx.lifecycle.viewModelScope
+import com.example.kotlinapp.data.models.User
+import com.example.kotlinapp.data.service.ProfileServiceAdapter
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.launch
 
 class ProfileViewModel : ViewModel() {
 
-    private val auth = FirebaseAuth.getInstance()
-    private val db = FirebaseFirestore.getInstance()
+    private val serviceAdapter = ProfileServiceAdapter()
 
-    private val _username = MutableLiveData<String>()
-    val username: LiveData<String> = _username
+    // Usamos un único LiveData que contiene todo el estado del usuario.
+    private val _user = MutableLiveData<User?>()
+    val user: LiveData<User?> = _user
 
-    private val _description = MutableLiveData<String>()
-    val description: LiveData<String> = _description
-
-    private val _avgRating = MutableLiveData<Double>()
-    val avgRating: LiveData<Double> = _avgRating
-
-    private val _sportList = MutableLiveData<List<String>>()
-    val sportList: LiveData<List<String>> = _sportList
-
-    private val _numRating = MutableLiveData<Long>()
-    val numRating: LiveData<Long> = _numRating
-
-    private val _isLoading = MutableLiveData<Boolean>()
-    val isLoading: LiveData<Boolean> = _isLoading
-
+    // LiveData para manejar errores
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
 
-    private var userProfileListener: ListenerRegistration? = null
+    // El init es un buen lugar para empezar a cargar datos.
+    init {
+        startListeningForUserProfile()
+    }
 
-    fun startListeningForUserProfile() {
-        _isLoading.value = true
-        val currentUser = auth.currentUser
+    private fun startListeningForUserProfile() {
+        // Obtenemos el ID del usuario a través del adaptador
+        val currentUserId = serviceAdapter.getCurrentUserId()
 
-        if (currentUser == null) {
+        if (currentUserId == null) {
             _error.value = "No se encontró un usuario autenticado."
-            _isLoading.value = false
             return
         }
 
-        // addSnapshotListener para una actualización en tiempo real
-        userProfileListener = db.collection("users").document(currentUser.uid)
-            .addSnapshotListener { document, firestoreError ->
-
-                if (firestoreError != null) {
-                    _error.value = "Error al escuchar cambios en el perfil: ${firestoreError.message}"
-                    _isLoading.value = false
-                    return@addSnapshotListener
+        // Lanzamos una corrutina para consumir el Flow del adaptador.
+        viewModelScope.launch {
+            serviceAdapter.getUserProfileFlow(currentUserId)
+                .catch { exception ->
+                    // Si el Flow emite un error, lo capturamos aquí.
+                    _error.value = "Error al obtener perfil: ${exception.message}"
                 }
-
-                if (document != null && document.exists()) {
-                    _username.value = document.getString("username")
-                    _description.value = document.getString("description")
-                    _avgRating.value = document.getDouble("avgRating") ?: 0.0
-                    _numRating.value = document.getLong("numRating") ?: 0L
-
-                    val rawSportList = document.get("sportList")
-                    if (rawSportList is List<*>) {
-                        _sportList.value = rawSportList.mapNotNull { it as? String }
-                    } else {
-                        _sportList.value = emptyList()
-                    }
-
-                    _error.value = null
-
-                } else {
-                    _error.value = "Perfil no encontrado. Esperando datos..."
+                .collect { userFromFlow ->
+                    // CADA VEZ que el Flow emite un nuevo perfil (por un cambio en DB),
+                    // actualizamos nuestro LiveData. La UI reaccionará a esto.
+                    _user.value = userFromFlow
+                    _error.value = null // Limpiamos errores si todo fue bien
                 }
-
-                _isLoading.value = false
-            }
+        }
     }
 
-    override fun onCleared() {
-        super.onCleared()
-        userProfileListener?.remove()
-    }
 }
