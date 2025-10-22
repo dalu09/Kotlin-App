@@ -9,6 +9,6 @@ data class User(
     val role: String = "user",
     val assistanceRate: Double = 0.0,
     val avgRating: Double = 0.0,
-    val numRating: Int = 0,
+    val numRating: Long = 0,
     val createdAt: Long = System.currentTimeMillis()
 )

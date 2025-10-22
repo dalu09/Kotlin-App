@@ -9,7 +9,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.observe
 import com.example.kotlinapp.R
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
@@ -33,9 +32,9 @@ class ProfileFragment : Fragment() {
         val ratingTextView: TextView = view.findViewById(R.id.profile_rating)
         val sportTagsGroup: ChipGroup = view.findViewById(R.id.sport_tags_group)
 
+        // Nuevo método de observadores.
         setupObservers(usernameTextView, descriptionTextView, ratingTextView, sportTagsGroup)
 
-        viewModel.startListeningForUserProfile()
     }
 
     private fun setupObservers(
@@ -44,26 +43,20 @@ class ProfileFragment : Fragment() {
         ratingTextView: TextView,
         sportTagsGroup: ChipGroup
     ) {
-        viewModel.username.observe(viewLifecycleOwner) { username ->
-            usernameTextView.text = username ?: "Nombre no disponible"
-        }
 
-        viewModel.description.observe(viewLifecycleOwner) { description ->
-            descriptionTextView.text = description ?: "Sin descripción."
-        }
-
-        viewModel.numRating.observe(viewLifecycleOwner) { count ->
-            val avg = viewModel.avgRating.value ?: 0.0
-            updateRatingUI(ratingTextView, avg, count)
-        }
-
-        viewModel.avgRating.observe(viewLifecycleOwner) { avg ->
-            val count = viewModel.numRating.value ?: 0L
-            updateRatingUI(ratingTextView, avg, count)
-        }
-
-        viewModel.sportList.observe(viewLifecycleOwner) { sports ->
-            updateSportsChips(sports, sportTagsGroup)
+        viewModel.user.observe(viewLifecycleOwner) { user ->
+            // Si el usuario es nulo mostrar un estado por defecto.
+            if (user == null) {
+                usernameTextView.text = "Cargando perfil..."
+                descriptionTextView.text = ""
+                ratingTextView.text = ""
+                sportTagsGroup.removeAllViews()
+            } else {
+                usernameTextView.text = user.username ?: "Nombre no disponible"
+                descriptionTextView.text = user.description ?: "Sin descripción."
+                updateRatingUI(ratingTextView, user.avgRating, user.numRating)
+                updateSportsChips(user.sportList, sportTagsGroup)
+            }
         }
 
         viewModel.error.observe(viewLifecycleOwner) { errorMessage ->
@@ -75,16 +68,14 @@ class ProfileFragment : Fragment() {
 
     private fun updateRatingUI(ratingTextView: TextView, avg: Double, count: Long) {
         if (count > 0) {
-            // Si hay 1 o más reseñas, mostramos las estrellas y el contador
             ratingTextView.text = "★ %.1f (%d)".format(avg, count)
         } else {
-            // Si el contador es 0, mostramos el mensaje "Sin calificaciones"
             ratingTextView.text = "Sin calificaciones"
         }
     }
+
     private fun updateSportsChips(sports: List<String>, sportTagsGroup: ChipGroup) {
         sportTagsGroup.removeAllViews()
-
         sports.forEach { sportName ->
             val chip = Chip(context).apply {
                 text = sportName
