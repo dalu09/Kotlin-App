@@ -10,9 +10,13 @@ class AuthRepository {
     private val authService = AuthServiceAdapter()
 
 
+
+
+
     suspend fun createUserInAuth(email: String, password: String): FirebaseUser {
         return authService.createUserInAuth(email, password)
     }
+
 
     suspend fun createUserProfileInFirestore(user: User) {
         authService.createUserProfileInFirestore(user)
