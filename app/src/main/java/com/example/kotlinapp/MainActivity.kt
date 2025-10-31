@@ -8,11 +8,19 @@ import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.example.kotlinapp.R
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.firestore.ktx.firestoreSettings
+import com.google.firebase.ktx.Firebase
 
 class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val settings = firestoreSettings {
+            isPersistenceEnabled = true
+        }
+        Firebase.firestore.firestoreSettings = settings
 
         installSplashScreen()
 
@@ -32,6 +40,7 @@ class MainActivity : AppCompatActivity() {
 
                 R.id.mainFragment,
                 R.id.profileFragment,
+                R.id.searchFragment,
                 R.id.eventDetailFragment -> {
                     bottomNavView.visibility = View.VISIBLE
                 }
