@@ -11,6 +11,7 @@ import com.example.kotlinapp.R
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.ktx.firestoreSettings
 import com.google.firebase.ktx.Firebase
+import com.google.firebase.auth.FirebaseAuth
 
 class MainActivity : AppCompatActivity() {
 
@@ -31,20 +32,25 @@ class MainActivity : AppCompatActivity() {
         val bottomNavView = findViewById<BottomNavigationView>(R.id.bottom_nav_view)
 
 
+        val auth = FirebaseAuth.getInstance()
+
+
+        if (auth.currentUser != null) {
+
+            navController.navigate(R.id.action_loginFragment_to_mainFragment)
+        }
+
+
         bottomNavView.setupWithNavController(navController)
 
-
         navController.addOnDestinationChangedListener { _, destination, _ ->
-
             when (destination.id) {
-
                 R.id.mainFragment,
                 R.id.profileFragment,
                 R.id.searchFragment,
                 R.id.eventDetailFragment -> {
                     bottomNavView.visibility = View.VISIBLE
                 }
-
                 else -> {
                     bottomNavView.visibility = View.GONE
                 }

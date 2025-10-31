@@ -2,6 +2,7 @@
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_main_graph"
     app:startDestination="@id/loginFragment">
 
     <fragment
@@ -85,5 +86,12 @@
             android:name="event_id"
             app:argType="string" />
     </dialog>
+
+</navigation>
+    <action
+        android:id="@+id/action_global_to_loginFragment"
+        app:destination="@id/loginFragment"
+        app:popUpTo="@id/nav_main_graph"
+        app:popUpToInclusive="true" />
 
 </navigation>
