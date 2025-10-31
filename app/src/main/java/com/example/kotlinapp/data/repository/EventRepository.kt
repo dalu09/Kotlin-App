@@ -28,6 +28,7 @@ class EventRepository {
     companion object { private const val TAG = "EventRepository" }
 
     private val db: FirebaseFirestore = FirebaseFirestore.getInstance()
+
     private val analytics: FirebaseAnalytics = Firebase.analytics
 
     private val eventServiceAdapter = EventServiceAdapter()
@@ -105,6 +106,7 @@ class EventRepository {
         return try {
             val eventRef = db.collection("events").document(eventId)
             val userRef = db.collection("users").document(userId)
+
 
             val alreadyBookedQuery = db.collection("booked")
                 .whereEqualTo("eventId", eventRef)
