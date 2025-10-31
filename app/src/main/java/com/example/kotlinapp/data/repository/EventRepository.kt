@@ -19,6 +19,9 @@ import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.example.kotlinapp.data.models.User
+import com.example.kotlinapp.data.service.EventServiceAdapter
+import com.google.firebase.firestore.Query
 
 class EventRepository {
 
@@ -27,6 +30,9 @@ class EventRepository {
     private val db: FirebaseFirestore = FirebaseFirestore.getInstance()
 
     private val analytics: FirebaseAnalytics = Firebase.analytics
+
+    private val eventServiceAdapter = EventServiceAdapter()
+
 
     suspend fun getEventById(eventId: String): Result<Event> {
         return try {
@@ -69,9 +75,29 @@ class EventRepository {
         }
     }
 
+    suspend fun getRecommendedEvents(user: User, limit: Long = 4L): Result<List<Event>> {
+        return try {
+            val events = eventServiceAdapter.getRecommendedEvents(user, limit)
+            Result.success(events)
+        } catch (e: Exception) {
+            Log.e(TAG, "Fallo al obtener eventos recomendados desde el repo: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getAllEvents(): Result<List<Event>> {
+        return try {
+            val events = eventServiceAdapter.getAllEvents()
+            Result.success(events)
+        } catch (e: Exception) {
+            // Si la consulta falla (ej. por índice faltante), el error se registrará aquí.
+            Log.e(TAG, "Fallo al obtener todos los eventos desde el repo: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
     suspend fun createBooking(eventId: String, userId: String): Result<Unit> {
 
-        //Enviar el evento a Analytics
         val bundle = Bundle()
         bundle.putString(FirebaseAnalytics.Param.ITEM_ID, eventId)
         bundle.putString("user_id", userId)
