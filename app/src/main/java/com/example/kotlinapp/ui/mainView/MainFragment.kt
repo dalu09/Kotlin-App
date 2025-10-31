@@ -9,6 +9,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
@@ -45,7 +46,7 @@ class MainFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            enableMyLocation()
+            enableMyLocation(true) // Cargar eventos cercanos después de obtener el permiso
         } else {
             Toast.makeText(requireContext(), "El permiso de ubicación es necesario para mostrar eventos cercanos", Toast.LENGTH_LONG).show()
         }
@@ -67,13 +68,22 @@ class MainFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         mapFragment?.getMapAsync(this)
 
         setupObservers()
+        setupClickListeners(view)
+    }
+
+    private fun setupClickListeners(view: View) {
+        val allEventsButton = view.findViewById<Button>(R.id.allEventsButton)
+        allEventsButton.setOnClickListener {
+            viewModel.loadAllEvents()
+        }
     }
 
     override fun onMapReady(googleMap: GoogleMap) {
         Log.d(TAG, "onMapReady: El mapa está listo.")
         gMap = googleMap
         gMap?.setOnMarkerClickListener(this)
-        enableMyLocation()
+        // Cargar eventos cercanos por defecto al iniciar
+        enableMyLocation(true)
     }
 
     override fun onMarkerClick(marker: Marker): Boolean {
@@ -89,7 +99,6 @@ class MainFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         } else {
             Log.w(TAG, "Marcador clickeado, pero no tiene un ID de evento en su tag.")
         }
-        // Retorna 'false' para permitir el comportamiento por defecto: centrar la cámara y mostrar la ventana de información
         return false
     }
 
@@ -119,8 +128,6 @@ class MainFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         events.forEach { event ->
             event.location?.let { geoPoint ->
                 val latLng = LatLng(geoPoint.latitude, geoPoint.longitude)
-                Log.d(TAG, "Añadiendo marcador para '${event.name}' (ID: ${event.id}) en Lat=${latLng.latitude}, Lon=${latLng.longitude}")
-                
                 val markerOptions = MarkerOptions()
                     .position(latLng)
                     .title(event.name)
@@ -145,7 +152,8 @@ class MainFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
             BitmapDescriptorFactory.fromBitmap(bitmap)
         }
     }
-    private fun enableMyLocation() {
+
+    private fun enableMyLocation(loadEvents: Boolean) {
         if (gMap == null) return
         Log.d(TAG, "enableMyLocation: Verificando permisos de ubicación.")
         when {
@@ -153,27 +161,27 @@ class MainFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                 requireContext(),
                 Manifest.permission.ACCESS_FINE_LOCATION
             ) == PackageManager.PERMISSION_GRANTED -> {
-                Log.d(TAG, "Permiso concedido. Obteniendo ubicación...")
                 gMap?.isMyLocationEnabled = true
                 
-                fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null).addOnSuccessListener { location ->
-                    if (location != null) {
-                        Log.i(TAG, "¡Ubicación OBTENIDA!: Lat=${location.latitude}, Lon=${location.longitude}")
-                        val userLatLng = LatLng(location.latitude, location.longitude)
-                        gMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(userLatLng, 10f)) // Zoom más alejado
+                if (loadEvents) {
+                    fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null).addOnSuccessListener { location ->
+                        if (location != null) {
+                            Log.i(TAG, "¡Ubicación OBTENIDA!: Lat=${location.latitude}, Lon=${location.longitude}")
+                            val userLatLng = LatLng(location.latitude, location.longitude)
+                            gMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(userLatLng, 10f))
 
-                        val userGeoPoint = GeoPoint(location.latitude, location.longitude)
-                        Log.d(TAG, "Pidiendo al ViewModel que cargue eventos cercanos...")
-                        viewModel.loadNearbyEvents(userGeoPoint, 100000.0)
+                            val userGeoPoint = GeoPoint(location.latitude, location.longitude)
+                            Log.d(TAG, "Pidiendo al ViewModel que cargue eventos cercanos...")
+                            viewModel.loadNearbyEvents(userGeoPoint, 10000.0) // 10km radius
 
-                    } else {
-                        Log.e(TAG, "¡ERROR CRÍTICO! La ubicación obtenida es NULL.")
-                        Toast.makeText(requireContext(), "No se pudo obtener la ubicación. Asegúrate de tenerla activada.", Toast.LENGTH_LONG).show()
+                        } else {
+                            Log.e(TAG, "¡ERROR CRÍTICO! La ubicación obtenida es NULL.")
+                            Toast.makeText(requireContext(), "No se pudo obtener la ubicación. Asegúrate de tenerla activada.", Toast.LENGTH_LONG).show()
+                        }
                     }
                 }
             }
             else -> {
-                Log.d(TAG, "Permiso denegado. Solicitando permiso...")
                 locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
             }
         }
