@@ -4,12 +4,15 @@ import android.location.Location
 import android.os.Bundle
 import android.util.Log
 import com.example.kotlinapp.data.models.Event
+import com.example.kotlinapp.data.models.User
 import com.example.kotlinapp.data.models.Venue
+import com.example.kotlinapp.data.service.EventServiceAdapter
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.analytics.ktx.analytics
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.GeoPoint
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.async
@@ -19,9 +22,6 @@ import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import com.example.kotlinapp.data.models.User
-import com.example.kotlinapp.data.service.EventServiceAdapter
-import com.google.firebase.firestore.Query
 
 class EventRepository {
 
@@ -30,7 +30,33 @@ class EventRepository {
     private val db: FirebaseFirestore = FirebaseFirestore.getInstance()
     private val analytics: FirebaseAnalytics = Firebase.analytics
 
-    private val eventServiceAdapter = EventServiceAdapter()
+    private val eventServiceAdapter: EventServiceAdapter = object : EventServiceAdapter {
+        override suspend fun getAllEvents(): List<Event> = coroutineScope {
+            val eventsSnapshot = db.collection("events").get().await()
+            val events = eventsSnapshot.toObjects(Event::class.java)
+            events.map {
+                async {
+                    it.venueid?.get()?.await()?.toObject(Venue::class.java)?.let { venue ->
+                        it.location = GeoPoint(venue.latitude, venue.longitude)
+                    }
+                    it
+                }
+            }.awaitAll()
+        }
+
+        override suspend fun getRecommendedEvents(user: User, limit: Long): List<Event> {
+            if (user.sportList.isEmpty()) return emptyList()
+
+            val querySnapshot = db.collection("events")
+                .whereIn("sport", user.sportList)
+                .whereGreaterThan("start_time", Date())
+                .orderBy("start_time", Query.Direction.ASCENDING)
+                .limit(limit)
+                .get()
+                .await()
+            return querySnapshot.toObjects(Event::class.java)
+        }
+    }
 
 
     suspend fun getEventById(eventId: String): Result<Event> {
