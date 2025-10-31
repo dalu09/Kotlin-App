@@ -1,0 +1,712 @@
+[1mdiff --git a/app/build.gradle.kts b/app/build.gradle.kts[m
+[1mindex a5ad55f..c2ab4d1 100644[m
+[1m--- a/app/build.gradle.kts[m
+[1m+++ b/app/build.gradle.kts[m
+[36m@@ -50,6 +50,7 @@[m [mdependencies {[m
+     implementation(libs.androidx.lifecycle.viewmodel.ktx)[m
+     implementation(libs.androidx.navigation.fragment.ktx)[m
+     implementation(libs.androidx.navigation.ui.ktx)[m
+[32m+[m[32m    implementation(libs.androidx.work.runtime.ktx)[m
+     testImplementation(libs.junit)[m
+     androidTestImplementation(libs.androidx.junit)[m
+     androidTestImplementation(libs.androidx.espresso.core)[m
+[1mdiff --git a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml[m
+[1mindex c601d78..8837b25 100644[m
+[1m--- a/app/src/main/AndroidManifest.xml[m
+[1m+++ b/app/src/main/AndroidManifest.xml[m
+[36m@@ -2,6 +2,7 @@[m
+ <manifest xmlns:android="http://schemas.android.com/apk/res/android"[m
+     xmlns:tools="http://schemas.android.com/tools">[m
+ [m
+[32m+[m[32m    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />[m
+     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />[m
+     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />[m
+ [m
+[1mdiff --git a/app/src/main/java/com/example/kotlinapp/MainActivity.kt b/app/src/main/java/com/example/kotlinapp/MainActivity.kt[m
+[1mindex 4173da7..309980c 100644[m
+[1m--- a/app/src/main/java/com/example/kotlinapp/MainActivity.kt[m
+[1m+++ b/app/src/main/java/com/example/kotlinapp/MainActivity.kt[m
+[36m@@ -1,13 +1,25 @@[m
+ package com.example.kotlinapp[m
+ [m
+[32m+[m[32mimport android.Manifest[m
+[32m+[m[32mimport android.content.pm.PackageManager[m
+[32m+[m[32mimport android.os.Build[m
+ import android.os.Bundle[m
+ import android.view.View[m
+[32m+[m[32mimport androidx.activity.result.contract.ActivityResultContracts[m
+ import androidx.appcompat.app.AppCompatActivity[m
+[32m+[m[32mimport androidx.core.content.ContextCompat[m
+ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen[m
+ import androidx.navigation.fragment.NavHostFragment[m
+ import androidx.navigation.ui.setupWithNavController[m
+[31m-import com.google.android.material.bottomnavigation.BottomNavigationView[m
+[32m+[m[32mimport androidx.work.Constraints[m
+[32m+[m[32mimport androidx.work.ExistingPeriodicWorkPolicy[m
+[32m+[m[32mimport androidx.work.NetworkType[m
+[32m+[m[32mimport androidx.work.PeriodicWorkRequestBuilder[m
+[32m+[m[32mimport androidx.work.WorkManager[m
+ import com.example.kotlinapp.R[m
+[32m+[m[32mimport com.example.kotlinapp.workers.RecommendationWorker[m
+[32m+[m[32mimport com.google.android.material.bottomnavigation.BottomNavigationView[m
+[32m+[m[32mimport java.util.concurrent.TimeUnit[m
+ import com.google.firebase.firestore.ktx.firestore[m
+ import com.google.firebase.firestore.ktx.firestoreSettings[m
+ import com.google.firebase.ktx.Firebase[m
+[36m@@ -15,6 +27,16 @@[m [mimport com.google.firebase.auth.FirebaseAuth[m
+ [m
+ class MainActivity : AppCompatActivity() {[m
+ [m
+[32m+[m[32m    private val requestPermissionLauncher = registerForActivityResult([m
+[32m+[m[32m        ActivityResultContracts.RequestPermission()[m
+[32m+[m[32m    ) { isGranted: Boolean ->[m
+[32m+[m[32m        if (isGranted) {[m
+[32m+[m[32m            // El permiso fue concedido[m
+[32m+[m[32m        } else {[m
+[32m+[m[32m            // El permiso fue denegado[m
+[32m+[m[32m        }[m
+[32m+[m[32m    }[m
+[32m+[m
+     override fun onCreate(savedInstanceState: Bundle?) {[m
+         super.onCreate(savedInstanceState)[m
+ [m
+[36m@@ -56,5 +78,38 @@[m [mclass MainActivity : AppCompatActivity() {[m
+                 }[m
+             }[m
+         }[m
+[32m+[m
+[32m+[m[32m        askNotificationPermission()[m
+[32m+[m[32m        setupRecommendationWorker()[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    private fun askNotificationPermission() {[m
+[32m+[m[32m        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {[m
+[32m+[m[32m            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==[m
+[32m+[m[32m                PackageManager.PERMISSION_GRANTED[m
+[32m+[m[32m            ) {[m
+[32m+[m[32m                // El permiso ya está concedido[m
+[32m+[m[32m            } else {[m
+[32m+[m[32m                // Solicitar el permiso[m
+[32m+[m[32m                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)[m
+[32m+[m[32m            }[m
+[32m+[m[32m        }[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    private fun setupRecommendationWorker() {[m
+[32m+[m[32m        val constraints = Constraints.Builder()[m
+[32m+[m[32m            .setRequiredNetworkType(NetworkType.CONNECTED)[m
+[32m+[m[32m            .build()[m
+[32m+[m
+[32m+[m[32m        val recommendationWorkRequest =[m
+[32m+[m[32m            PeriodicWorkRequestBuilder<RecommendationWorker>(24, TimeUnit.HOURS)[m
+[32m+[m[32m                .setConstraints(constraints)[m
+[32m+[m[32m                .build()[m
+[32m+[m
+[32m+[m[32m        WorkManager.getInstance(this).enqueueUniquePeriodicWork([m
+[32m+[m[32m            "recommendation_work",[m
+[32m+[m[32m            ExistingPeriodicWorkPolicy.KEEP,[m
+[32m+[m[32m            recommendationWorkRequest[m
+[32m+[m[32m        )[m
+     }[m
+[31m-}[m
+\ No newline at end of file[m
+[32m+[m[32m}[m
+[1mdiff --git a/app/src/main/java/com/example/kotlinapp/data/repository/AuthRepository.kt b/app/src/main/java/com/example/kotlinapp/data/repository/AuthRepository.kt[m
+[1mindex 2f956c6..dfef62a 100644[m
+[1m--- a/app/src/main/java/com/example/kotlinapp/data/repository/AuthRepository.kt[m
+[1m+++ b/app/src/main/java/com/example/kotlinapp/data/repository/AuthRepository.kt[m
+[36m@@ -1,51 +1,46 @@[m
+ package com.example.kotlinapp.data.repository[m
+ [m
+ import com.example.kotlinapp.data.models.User[m
+[31m-import com.example.kotlinapp.data.serviceadapter.AuthServiceAdapter[m
+[32m+[m[32mimport com.google.firebase.auth.FirebaseAuth[m
+ import com.google.firebase.auth.FirebaseUser[m
+[32m+[m[32mimport com.google.firebase.firestore.FirebaseFirestore[m
+[32m+[m[32mimport kotlinx.coroutines.tasks.await[m
+ [m
+ class AuthRepository {[m
+[31m-[m
+[31m-[m
+[31m-    private val authService = AuthServiceAdapter()[m
+[31m-[m
+[31m-[m
+[31m-[m
+[31m-[m
+[32m+[m[32m    private val firebaseAuth = FirebaseAuth.getInstance()[m
+[32m+[m[32m    private val firestore = FirebaseFirestore.getInstance()[m
+ [m
+     suspend fun createUserInAuth(email: String, password: String): FirebaseUser {[m
+[31m-        return authService.createUserInAuth(email, password)[m
+[32m+[m[32m        val authResult = firebaseAuth.createUserWithEmailAndPassword(email, password).await()[m
+[32m+[m[32m        return authResult.user ?: throw Exception("Error al crear el usuario en Authentication.")[m
+     }[m
+ [m
+ [m
+     suspend fun createUserProfileInFirestore(user: User) {[m
+[31m-        authService.createUserProfileInFirestore(user)[m
+[32m+[m[32m        firestore.collection("users").document(user.uid).set(user).await()[m
+     }[m
+ [m
+ [m
+     suspend fun signIn(email: String, password: String): FirebaseUser {[m
+[31m-        return authService.signIn(email, password)[m
+[32m+[m[32m        val authResult = firebaseAuth.signInWithEmailAndPassword(email.trim(), password).await()[m
+[32m+[m[32m        return authResult.user ?: throw Exception("No fue posible iniciar sesión.")[m
+     }[m
+ [m
+[31m-[m
+     suspend fun sendPasswordReset(email: String) {[m
+[31m-        authService.sendPasswordReset(email)[m
+[32m+[m[32m        firebaseAuth.sendPasswordResetEmail(email.trim()).await()[m
+     }[m
+ [m
+[32m+[m[32m    fun isLoggedIn(): Boolean = firebaseAuth.currentUser != null[m
+ [m
+[31m-    fun isLoggedIn(): Boolean = authService.isLoggedIn()[m
+[31m-[m
+[31m-[m
+[31m-    fun currentUser(): FirebaseUser? = authService.currentUser()[m
+[31m-[m
+[31m-[m
+[31m-    fun currentUserId(): String? = authService.currentUserId()[m
+[32m+[m[32m    fun currentUser(): FirebaseUser? = firebaseAuth.currentUser[m
+ [m
+[32m+[m[32m    fun currentUserId(): String? = firebaseAuth.currentUser?.uid[m
+ [m
+[31m-    fun signOut() = authService.signOut()[m
+[32m+[m[32m    fun signOut() = firebaseAuth.signOut()[m
+ [m
+ [m
+     suspend fun fetchUserProfile(uid: String): User? {[m
+[31m-        return authService.fetchUserProfile(uid)[m
+[32m+[m[32m        val snap = firestore.collection("users").document(uid).get().await()[m
+[32m+[m[32m        return snap.toObject(User::class.java)[m
+     }[m
+ }[m
+\ No newline at end of file[m
+[1mdiff --git a/app/src/main/java/com/example/kotlinapp/data/repository/UserPreferencesRepository.kt b/app/src/main/java/com/example/kotlinapp/data/repository/UserPreferencesRepository.kt[m
+[1mnew file mode 100644[m
+[1mindex 0000000..9ae6a8c[m
+[1m--- /dev/null[m
+[1m+++ b/app/src/main/java/com/example/kotlinapp/data/repository/UserPreferencesRepository.kt[m
+[36m@@ -0,0 +1,44 @@[m
+[32m+[m[32mpackage com.example.kotlinapp.data.repository[m
+[32m+[m
+[32m+[m[32mimport android.content.Context[m
+[32m+[m[32mimport android.content.SharedPreferences[m
+[32m+[m
+[32m+[m[32mclass UserPreferencesRepository(context: Context) {[m
+[32m+[m
+[32m+[m[32m    private val prefs: SharedPreferences = context.getSharedPreferences("user_prefs", Context.MODE_PRIVATE)[m
+[32m+[m
+[32m+[m[32m    companion object {[m
+[32m+[m[32m        private const val MOST_VIEWED_SPORT = "most_viewed_sport"[m
+[32m+[m[32m        private const val SPORT_VIEW_COUNT_PREFIX = "sport_view_count_"[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    fun incrementSportView(sport: String) {[m
+[32m+[m[32m        val key = "$SPORT_VIEW_COUNT_PREFIX$sport"[m
+[32m+[m[32m        val currentCount = prefs.getInt(key, 0)[m
+[32m+[m[32m        prefs.edit().putInt(key, currentCount + 1).apply()[m
+[32m+[m[32m        updateMostViewedSport()[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    private fun updateMostViewedSport() {[m
+[32m+[m[32m        val allPrefs = prefs.all[m
+[32m+[m[32m        var maxCount = -1[m
+[32m+[m[32m        var mostViewedSport: String? = null[m
+[32m+[m
+[32m+[m[32m        for ((key, value) in allPrefs) {[m
+[32m+[m[32m            if (key.startsWith(SPORT_VIEW_COUNT_PREFIX) && value is Int) {[m
+[32m+[m[32m                if (value > maxCount) {[m
+[32m+[m[32m                    maxCount = value[m
+[32m+[m[32m                    mostViewedSport = key.removePrefix(SPORT_VIEW_COUNT_PREFIX)[m
+[32m+[m[32m                }[m
+[32m+[m[32m            }[m
+[32m+[m[32m        }[m
+[32m+[m
+[32m+[m[32m        if (mostViewedSport != null) {[m
+[32m+[m[32m            prefs.edit().putString(MOST_VIEWED_SPORT, mostViewedSport).apply()[m
+[32m+[m[32m        }[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    fun getMostViewedSport(): String? {[m
+[32m+[m[32m        return prefs.getString(MOST_VIEWED_SPORT, null)[m
+[32m+[m[32m    }[m
+[32m+[m[32m}[m
+[1mdiff --git a/app/src/main/java/com/example/kotlinapp/data/service/EventServiceAdapter.kt b/app/src/main/java/com/example/kotlinapp/data/service/EventServiceAdapter.kt[m
+[1mindex 37150b8..ebb5a15 100644[m
+[1m--- a/app/src/main/java/com/example/kotlinapp/data/service/EventServiceAdapter.kt[m
+[1m+++ b/app/src/main/java/com/example/kotlinapp/data/service/EventServiceAdapter.kt[m
+[36m@@ -1,23 +1,150 @@[m
+ package com.example.kotlinapp.data.service[m
+ [m
+[32m+[m[32mimport android.os.Bundle[m
+ import com.example.kotlinapp.data.models.Event[m
+ import com.example.kotlinapp.data.models.User[m
+[32m+[m[32mimport com.example.kotlinapp.data.models.Venue[m
+[32m+[m[32mimport com.google.firebase.Timestamp[m
+[32m+[m[32mimport com.google.firebase.analytics.FirebaseAnalytics[m
+[32m+[m[32mimport com.google.firebase.analytics.ktx.analytics[m
+[32m+[m[32mimport com.google.firebase.firestore.DocumentReference[m
+[32m+[m[32mimport com.google.firebase.firestore.FieldValue[m
+ import com.google.firebase.firestore.FirebaseFirestore[m
+ import com.google.firebase.firestore.Query[m
+[32m+[m[32mimport com.google.firebase.firestore.SetOptions[m
+[32m+[m[32mimport com.google.firebase.ktx.Firebase[m
+ import kotlinx.coroutines.tasks.await[m
+[32m+[m[32mimport java.text.SimpleDateFormat[m
+[32m+[m[32mimport java.util.Date[m
+[32m+[m[32mimport java.util.Locale[m
+ [m
+[31m-class EventServiceAdapter {[m
+[32m+[m[32m/**[m
+[32m+[m[32m * Unified service adapter that provides:[m
+[32m+[m[32m *  - low-level event/venue reads[m
+[32m+[m[32m *  - booking transaction[m
+[32m+[m[32m *  - helper queries (hasUserBooking)[m
+[32m+[m[32m *  - recommendation and listing helpers[m
+[32m+[m[32m *[m
+[32m+[m[32m * Use by creating an instance of FirebaseEventServiceAdapter() or inject it.[m
+[32m+[m[32m */[m
+[32m+[m[32minterface EventServiceAdapter {[m
+[32m+[m[32m    // Reads[m
+[32m+[m[32m    suspend fun fetchEvent(eventId: String): Event?[m
+[32m+[m[32m    suspend fun fetchAllEvents(): List<Event>[m
+[32m+[m[32m    suspend fun fetchVenue(ref: DocumentReference): Venue?[m
+ [m
+[31m-    private val db = FirebaseFirestore.getInstance()[m
+[31m-    private val eventsCollection = db.collection("events")[m
+[32m+[m[32m    // Auxiliary query[m
+[32m+[m[32m    suspend fun hasUserBooking(eventId: String, userId: String): Boolean[m
+ [m
+[31m-    suspend fun getRecommendedEvents(user: User, limit: Long = 5): List<Event> {[m
+[32m+[m[32m    // Writes/transactions[m
+[32m+[m[32m    suspend fun runBookingTransaction(eventId: String, userId: String)[m
+[32m+[m
+[32m+[m[32m    // Recommendations / helpers[m
+[32m+[m[32m    suspend fun getRecommendedEvents(user: User, limit: Long = 5): List<Event>[m
+[32m+[m[32m    suspend fun getAllEvents(): List<Event>[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mclass FirebaseEventServiceAdapter([m
+[32m+[m[32m    private val db: FirebaseFirestore = FirebaseFirestore.getInstance(),[m
+[32m+[m[32m    private val analytics: FirebaseAnalytics = Firebase.analytics[m
+[32m+[m[32m) : EventServiceAdapter {[m
+[32m+[m
+[32m+[m[32m    private val eventsCol = db.collection("events")[m
+[32m+[m[32m    private val usersCol = db.collection("users")[m
+[32m+[m[32m    private val bookedCol = db.collection("booked")[m
+[32m+[m
+[32m+[m[32m    // -------- Lectura --------[m
+[32m+[m[32m    override suspend fun fetchEvent(eventId: String): Event? {[m
+[32m+[m[32m        val snap = eventsCol.document(eventId).get().await()[m
+[32m+[m[32m        return snap.toObject(Event::class.java)[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    override suspend fun fetchAllEvents(): List<Event> {[m
+[32m+[m[32m        val snap = eventsCol.get().await()[m
+[32m+[m[32m        return snap.toObjects(Event::class.java)[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    override suspend fun fetchVenue(ref: DocumentReference): Venue? {[m
+[32m+[m[32m        val snap = ref.get().await()[m
+[32m+[m[32m        return if (snap.exists()) snap.toObject(Venue::class.java) else null[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    // -------- Consultas auxiliares --------[m
+[32m+[m[32m    override suspend fun hasUserBooking(eventId: String, userId: String): Boolean {[m
+[32m+[m[32m        val eventRef = eventsCol.document(eventId)[m
+[32m+[m[32m        val userRef = usersCol.document(userId)[m
+[32m+[m
+[32m+[m[32m        val q = db.collection("booked")[m
+[32m+[m[32m            .whereEqualTo("eventId", eventRef)[m
+[32m+[m[32m            .whereEqualTo("userId", userRef)[m
+[32m+[m[32m            .limit(1)[m
+[32m+[m[32m            .get()[m
+[32m+[m[32m            .await()[m
+[32m+[m
+[32m+[m[32m        return !q.isEmpty[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    // -------- Escrituras (transacción) --------[m
+[32m+[m[32m    override suspend fun runBookingTransaction(eventId: String, userId: String) {[m
+[32m+[m[32m        // Analytics[m
+[32m+[m[32m        analytics.logEvent("booking_completed", Bundle().apply {[m
+[32m+[m[32m            putString(FirebaseAnalytics.Param.ITEM_ID, eventId)[m
+[32m+[m[32m            putString("user_id", userId)[m
+[32m+[m[32m        })[m
+[32m+[m
+[32m+[m[32m        db.runTransaction { tx ->[m
+[32m+[m[32m            val eventRef = eventsCol.document(eventId)[m
+[32m+[m[32m            val eventSnap = tx.get(eventRef)[m
+[32m+[m[32m            if (!eventSnap.exists()) throw Exception("Evento no existe")[m
+[32m+[m
+[32m+[m[32m            // Optionally check capacity before increasing (read current booked and max_capacity)[m
+[32m+[m[32m            val currentBooked = eventSnap.getLong("booked") ?: 0L[m
+[32m+[m[32m            val maxCapacity = eventSnap.getLong("max_capacity") ?: Long.MAX_VALUE[m
+[32m+[m[32m            if (currentBooked >= maxCapacity) {[m
+[32m+[m[32m                throw Exception("Event is full")[m
+[32m+[m[32m            }[m
+[32m+[m
+[32m+[m[32m            // Crear booking[m
+[32m+[m[32m            val bookingRef = bookedCol.document()[m
+[32m+[m[32m            tx.set([m
+[32m+[m[32m                bookingRef,[m
+[32m+[m[32m                mapOf([m
+[32m+[m[32m                    "eventId" to eventRef,[m
+[32m+[m[32m                    "userId" to usersCol.document(userId),[m
+[32m+[m[32m                    "timestamp" to Timestamp.now()[m
+[32m+[m[32m                )[m
+[32m+[m[32m            )[m
+[32m+[m
+[32m+[m[32m            // Increment booked atomically[m
+[32m+[m[32m            tx.update(eventRef, "booked", FieldValue.increment(1))[m
+[32m+[m
+[32m+[m[32m            // Marcar usuario único del mes[m
+[32m+[m[32m            val yyyyMM = SimpleDateFormat("yyyyMM", Locale.getDefault()).format(Date())[m
+[32m+[m[32m            val monthlyRef = db.collection("monthly_unique_bookers")[m
+[32m+[m[32m                .document(yyyyMM)[m
+[32m+[m[32m                .collection("users")[m
+[32m+[m[32m                .document(userId)[m
+[32m+[m
+[32m+[m[32m            tx.set([m
+[32m+[m[32m                monthlyRef,[m
+[32m+[m[32m                mapOf("first_booking_at" to FieldValue.serverTimestamp()),[m
+[32m+[m[32m                SetOptions.merge()[m
+[32m+[m[32m            )[m
+[32m+[m[32m            null[m
+[32m+[m[32m        }.await()[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    // -------- Recomendaciones / Listados --------[m
+[32m+[m[32m    override suspend fun getRecommendedEvents(user: User, limit: Long): List<Event> {[m
+         if (user.sportList.isEmpty()) {[m
+[31m-            return emptyList() // No hay deportes, no hay recomendaciones.[m
+[32m+[m[32m            return emptyList()[m
+         }[m
+ [m
+[31m-        val querySnapshot = eventsCollection[m
+[31m-            .whereIn("sport", user.sportList)[m
+[32m+[m[32m        // Firestore whereIn supports up to 10 values — ensure user.sportList size <= 10 or trim[m
+[32m+[m[32m        val sports = if (user.sportList.size > 10) user.sportList.take(10) else user.sportList[m
+[32m+[m
+[32m+[m[32m        val querySnapshot = eventsCol[m
+[32m+[m[32m            .whereIn("sport", sports)[m
+             .limit(limit)[m
+             .get()[m
+             .await()[m
+[36m@@ -25,8 +152,8 @@[m [mclass EventServiceAdapter {[m
+         return querySnapshot.toObjects(Event::class.java)[m
+     }[m
+ [m
+[31m-    suspend fun getAllEvents(): List<Event> {[m
+[31m-        val querySnapshot = eventsCollection[m
+[32m+[m[32m    override suspend fun getAllEvents(): List<Event> {[m
+[32m+[m[32m        val querySnapshot = eventsCol[m
+             .orderBy("start_time", Query.Direction.ASCENDING)[m
+             .get()[m
+             .await()[m
+[36m@@ -34,4 +161,3 @@[m [mclass EventServiceAdapter {[m
+         return querySnapshot.toObjects(Event::class.java)[m
+     }[m
+ }[m
+[31m-    [m
+\ No newline at end of file[m
+[1mdiff --git a/app/src/main/java/com/example/kotlinapp/ui/EventDetail/EventDetailFragment.kt b/app/src/main/java/com/example/kotlinapp/ui/EventDetail/EventDetailFragment.kt[m
+[1mindex f2dd977..e6721fb 100644[m
+[1m--- a/app/src/main/java/com/example/kotlinapp/ui/EventDetail/EventDetailFragment.kt[m
+[1m+++ b/app/src/main/java/com/example/kotlinapp/ui/EventDetail/EventDetailFragment.kt[m
+[36m@@ -11,6 +11,7 @@[m [mimport android.widget.TextView[m
+ import android.widget.Toast[m
+ import androidx.fragment.app.viewModels[m
+ import com.example.kotlinapp.R[m
+[32m+[m[32mimport com.example.kotlinapp.data.repository.UserPreferencesRepository[m
+ import com.google.android.material.bottomsheet.BottomSheetBehavior[m
+ import com.google.android.material.bottomsheet.BottomSheetDialog[m
+ import com.google.android.material.bottomsheet.BottomSheetDialogFragment[m
+[36m@@ -25,6 +26,7 @@[m [mclass EventDetailFragment : BottomSheetDialogFragment() {[m
+     private lateinit var participantsText: TextView[m
+     private lateinit var progressBar: ProgressBar[m
+     private lateinit var reserveButton: Button[m
+[32m+[m[32m    private lateinit var userPreferencesRepository: UserPreferencesRepository[m
+ [m
+     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {[m
+         val dialog = super.onCreateDialog(savedInstanceState) as BottomSheetDialog[m
+[36m@@ -47,6 +49,8 @@[m [mclass EventDetailFragment : BottomSheetDialogFragment() {[m
+     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {[m
+         super.onViewCreated(view, savedInstanceState)[m
+ [m
+[32m+[m[32m        userPreferencesRepository = UserPreferencesRepository(requireContext())[m
+[32m+[m
+         titleText = view.findViewById(R.id.eventTitle)[m
+         descriptionText = view.findViewById(R.id.eventDescription)[m
+         participantsText = view.findViewById(R.id.participants)[m
+[36m@@ -73,6 +77,11 @@[m [mclass EventDetailFragment : BottomSheetDialogFragment() {[m
+             participantsText.text = participantsString[m
+             progressBar.progress = if (event.max_capacity > 0) (100 * event.booked) / event.max_capacity else 0[m
+             reserveButton.isEnabled = event.booked < event.max_capacity[m
+[32m+[m
+[32m+[m[32m            // Registrar la preferencia del usuario[m
+[32m+[m[32m            if (event.sport.isNotBlank()) {[m
+[32m+[m[32m                userPreferencesRepository.incrementSportView(event.sport)[m
+[32m+[m[32m            }[m
+         }[m
+ [m
+         viewModel.error.observe(viewLifecycleOwner) { error ->[m
+[1mdiff --git a/app/src/main/java/com/example/kotlinapp/ui/mainView/MainFragment.kt b/app/src/main/java/com/example/kotlinapp/ui/mainView/MainFragment.kt[m
+[1mindex 0ebb41b..03ca92e 100644[m
+[1m--- a/app/src/main/java/com/example/kotlinapp/ui/mainView/MainFragment.kt[m
+[1m+++ b/app/src/main/java/com/example/kotlinapp/ui/mainView/MainFragment.kt[m
+[36m@@ -9,6 +9,7 @@[m [mimport android.util.Log[m
+ import android.view.LayoutInflater[m
+ import android.view.View[m
+ import android.view.ViewGroup[m
+[32m+[m[32mimport android.widget.Button[m
+ import android.widget.Toast[m
+ import androidx.activity.result.contract.ActivityResultContracts[m
+ import androidx.core.content.ContextCompat[m
+[36m@@ -45,7 +46,7 @@[m [mclass MainFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList[m
+         ActivityResultContracts.RequestPermission()[m
+     ) { isGranted ->[m
+         if (isGranted) {[m
+[31m-            enableMyLocation()[m
+[32m+[m[32m            enableMyLocation(true) // Cargar eventos cercanos después de obtener el permiso[m
+         } else {[m
+             Toast.makeText(requireContext(), "El permiso de ubicación es necesario para mostrar eventos cercanos", Toast.LENGTH_LONG).show()[m
+         }[m
+[36m@@ -67,13 +68,22 @@[m [mclass MainFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList[m
+         mapFragment?.getMapAsync(this)[m
+ [m
+         setupObservers()[m
+[32m+[m[32m        setupClickListeners(view)[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    private fun setupClickListeners(view: View) {[m
+[32m+[m[32m        val allEventsButton = view.findViewById<Button>(R.id.allEventsButton)[m
+[32m+[m[32m        allEventsButton.setOnClickListener {[m
+[32m+[m[32m            viewModel.loadAllEvents()[m
+[32m+[m[32m        }[m
+     }[m
+ [m
+     override fun onMapReady(googleMap: GoogleMap) {[m
+         Log.d(TAG, "onMapReady: El mapa está listo.")[m
+         gMap = googleMap[m
+         gMap?.setOnMarkerClickListener(this)[m
+[31m-        enableMyLocation()[m
+[32m+[m[32m        // Cargar eventos cercanos por defecto al iniciar[m
+[32m+[m[32m        enableMyLocation(true)[m
+     }[m
+ [m
+     override fun onMarkerClick(marker: Marker): Boolean {[m
+[36m@@ -89,7 +99,6 @@[m [mclass MainFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList[m
+         } else {[m
+             Log.w(TAG, "Marcador clickeado, pero no tiene un ID de evento en su tag.")[m
+         }[m
+[31m-        // Retorna 'false' para permitir el comportamiento por defecto: centrar la cámara y mostrar la ventana de información[m
+         return false[m
+     }[m
+ [m
+[36m@@ -119,8 +128,6 @@[m [mclass MainFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList[m
+         events.forEach { event ->[m
+             event.location?.let { geoPoint ->[m
+                 val latLng = LatLng(geoPoint.latitude, geoPoint.longitude)[m
+[31m-                Log.d(TAG, "Añadiendo marcador para '${event.name}' (ID: ${event.id}) en Lat=${latLng.latitude}, Lon=${latLng.longitude}")[m
+[31m-                [m
+                 val markerOptions = MarkerOptions()[m
+                     .position(latLng)[m
+                     .title(event.name)[m
+[36m@@ -145,7 +152,8 @@[m [mclass MainFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList[m
+             BitmapDescriptorFactory.fromBitmap(bitmap)[m
+         }[m
+     }[m
+[31m-    private fun enableMyLocation() {[m
+[32m+[m
+[32m+[m[32m    private fun enableMyLocation(loadEvents: Boolean) {[m
+         if (gMap == null) return[m
+         Log.d(TAG, "enableMyLocation: Verificando permisos de ubicación.")[m
+         when {[m
+[36m@@ -153,29 +161,29 @@[m [mclass MainFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList[m
+                 requireContext(),[m
+                 Manifest.permission.ACCESS_FINE_LOCATION[m
+             ) == PackageManager.PERMISSION_GRANTED -> {[m
+[31m-                Log.d(TAG, "Permiso concedido. Obteniendo ubicación...")[m
+                 gMap?.isMyLocationEnabled = true[m
+                 [m
+[31m-                fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null).addOnSuccessListener { location ->[m
+[31m-                    if (location != null) {[m
+[31m-                        Log.i(TAG, "¡Ubicación OBTENIDA!: Lat=${location.latitude}, Lon=${location.longitude}")[m
+[31m-                        val userLatLng = LatLng(location.latitude, location.longitude)[m
+[31m-                        gMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(userLatLng, 10f)) // Zoom más alejado[m
+[31m-[m
+[31m-                        val userGeoPoint = GeoPoint(location.latitude, location.longitude)[m
+[31m-                        Log.d(TAG, "Pidiendo al ViewModel que cargue eventos cercanos...")[m
+[31m-                        viewModel.loadNearbyEvents(userGeoPoint, 100000.0)[m
+[31m-[m
+[31m-                    } else {[m
+[31m-                        Log.e(TAG, "¡ERROR CRÍTICO! La ubicación obtenida es NULL.")[m
+[31m-                        Toast.makeText(requireContext(), "No se pudo obtener la ubicación. Asegúrate de tenerla activada.", Toast.LENGTH_LONG).show()[m
+[32m+[m[32m                if (loadEvents) {[m
+[32m+[m[32m                    fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null).addOnSuccessListener { location ->[m
+[32m+[m[32m                        if (location != null) {[m
+[32m+[m[32m                            Log.i(TAG, "¡Ubicación OBTENIDA!: Lat=${location.latitude}, Lon=${location.longitude}")[m
+[32m+[m[32m                            val userLatLng = LatLng(location.latitude, location.longitude)[m
+[32m+[m[32m                            gMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(userLatLng, 10f))[m
+[32m+[m
+[32m+[m[32m                            val userGeoPoint = GeoPoint(location.latitude, location.longitude)[m
+[32m+[m[32m                            Log.d(TAG, "Pidiendo al ViewModel que cargue eventos cercanos...")[m
+[32m+[m[32m                            viewModel.loadNearbyEvents(userGeoPoint, 10000.0) // 10km radius[m
+[32m+[m
+[32m+[m[32m                        } else {[m
+[32m+[m[32m                            Log.e(TAG, "¡ERROR CRÍTICO! La ubicación obtenida es NULL.")[m
+[32m+[m[32m                            Toast.makeText(requireContext(), "No se pudo obtener la ubicación. Asegúrate de tenerla activada.", Toast.LENGTH_LONG).show()[m
+[32m+[m[32m                        }[m
+                     }[m
+                 }[m
+             }[m
+             else -> {[m
+[31m-                Log.d(TAG, "Permiso denegado. Solicitando permiso...")[m
+                 locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)[m
+             }[m
+         }[m
+     }[m
+[31m-}[m
+\ No newline at end of file[m
+[32m+[m[32m}[m
+[1mdiff --git a/app/src/main/java/com/example/kotlinapp/ui/mainView/MainViewModel.kt b/app/src/main/java/com/example/kotlinapp/ui/mainView/MainViewModel.kt[m
+[1mindex e43ca85..d29b541 100644[m
+[1m--- a/app/src/main/java/com/example/kotlinapp/ui/mainView/MainViewModel.kt[m
+[1m+++ b/app/src/main/java/com/example/kotlinapp/ui/mainView/MainViewModel.kt[m
+[36m@@ -19,13 +19,24 @@[m [mclass MainViewModel : ViewModel() {[m
+     private val _error = MutableLiveData<String>()[m
+     val error: LiveData<String> get() = _error[m
+ [m
+[32m+[m[32m    fun loadAllEvents() {[m
+[32m+[m[32m        viewModelScope.launch {[m
+[32m+[m[32m            val result = eventRepository.getAllEvents()[m
+[32m+[m[32m            result.onSuccess {[m
+[32m+[m[32m                _events.postValue(it)[m
+[32m+[m[32m            }.onFailure {[m
+[32m+[m[32m                _error.postValue("Error al cargar todos los eventos: ${it.message}")[m
+[32m+[m[32m            }[m
+[32m+[m[32m        }[m
+[32m+[m[32m    }[m
+[32m+[m
+     fun loadNearbyEvents(userLocation: GeoPoint, radiusInMeters: Double) {[m
+         viewModelScope.launch {[m
+             val result = eventRepository.getNearbyEvents(userLocation, radiusInMeters)[m
+             result.onSuccess {[m
+                 _events.postValue(it)[m
+             }.onFailure {[m
+[31m-                _error.postValue("Error al cargar eventos: ${it.message}")[m
+[32m+[m[32m                _error.postValue("Error al cargar eventos cercanos: ${it.message}")[m
+             }[m
+         }[m
+     }[m
+[1mdiff --git a/app/src/main/java/com/example/kotlinapp/workers/RecommendationWorker.kt b/app/src/main/java/com/example/kotlinapp/workers/RecommendationWorker.kt[m
+[1mnew file mode 100644[m
+[1mindex 0000000..e0925c2[m
+[1m--- /dev/null[m
+[1m+++ b/app/src/main/java/com/example/kotlinapp/workers/RecommendationWorker.kt[m
+[36m@@ -0,0 +1,52 @@[m
+[32m+[m[32mpackage com.example.kotlinapp.workers[m
+[32m+[m
+[32m+[m[32mimport android.app.NotificationChannel[m
+[32m+[m[32mimport android.app.NotificationManager[m
+[32m+[m[32mimport android.content.Context[m
+[32m+[m[32mimport android.os.Build[m
+[32m+[m[32mimport androidx.core.app.NotificationCompat[m
+[32m+[m[32mimport androidx.work.CoroutineWorker[m
+[32m+[m[32mimport androidx.work.WorkerParameters[m
+[32m+[m[32mimport com.example.kotlinapp.R[m
+[32m+[m[32mimport com.example.kotlinapp.data.repository.EventRepository[m
+[32m+[m[32mimport com.example.kotlinapp.data.repository.UserPreferencesRepository[m
+[32m+[m
+[32m+[m[32mclass RecommendationWorker(appContext: Context, workerParams: WorkerParameters) :[m
+[32m+[m[32m    CoroutineWorker(appContext, workerParams) {[m
+[32m+[m
+[32m+[m[32m    override suspend fun doWork(): Result {[m
+[32m+[m[32m        val userPrefsRepository = UserPreferencesRepository(applicationContext)[m
+[32m+[m[32m        val eventRepository = EventRepository()[m
+[32m+[m
+[32m+[m[32m        val mostViewedSport = userPrefsRepository.getMostViewedSport() ?: return Result.success()[m
+[32m+[m
+[32m+[m[32m        val recommendedEvents = eventRepository.getUpcomingEventsBySport(mostViewedSport).getOrNull()[m
+[32m+[m
+[32m+[m[32m        val eventToShow = recommendedEvents?.firstOrNull() ?: return Result.success()[m
+[32m+[m
+[32m+[m[32m        sendNotification(eventToShow.name, eventToShow.description)[m
+[32m+[m
+[32m+[m[32m        return Result.success()[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    private fun sendNotification(title: String, description: String) {[m
+[32m+[m[32m        val notificationManager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager[m
+[32m+[m
+[32m+[m[32m        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {[m
+[32m+[m[32m            val channel = NotificationChannel([m
+[32m+[m[32m                "recommendation_channel",[m
+[32m+[m[32m                "Recomendaciones de Eventos",[m
+[32m+[m[32m                NotificationManager.IMPORTANCE_DEFAULT[m
+[32m+[m[32m            )[m
+[32m+[m[32m            notificationManager.createNotificationChannel(channel)[m
+[32m+[m[32m        }[m
+[32m+[m
+[32m+[m[32m        val notification = NotificationCompat.Builder(applicationContext, "recommendation_channel")[m
+[32m+[m[32m            .setContentTitle("Evento recomendado: $title")[m
+[32m+[m[32m            .setContentText("A otros usuarios como tú les gustó este evento.")[m
+[32m+[m[32m            .setSmallIcon(R.drawable.ic_visibility)[m
+[32m+[m[32m            .build()[m
+[32m+[m
+[32m+[m[32m        notificationManager.notify(1, notification)[m
+[32m+[m[32m    }[m
+[32m+[m[32m}[m
+[1mdiff --git a/app/src/main/res/layout/fragment_main.xml b/app/src/main/res/layout/fragment_main.xml[m
+[1mindex ef870f8..745ed86 100644[m
+[1m--- a/app/src/main/res/layout/fragment_main.xml[m
+[1m+++ b/app/src/main/res/layout/fragment_main.xml[m
+[36m@@ -6,12 +6,22 @@[m
+     android:layout_height="match_parent"[m
+     tools:context=".ui.mainView.MainFragment">[m
+ [m
+[32m+[m[32m    <com.google.android.material.button.MaterialButton[m
+[32m+[m[32m        android:id="@+id/allEventsButton"[m
+[32m+[m[32m        android:layout_width="wrap_content"[m
+[32m+[m[32m        android:layout_height="wrap_content"[m
+[32m+[m[32m        android:text="All Events"[m
+[32m+[m[32m        app:layout_constraintTop_toTopOf="parent"[m
+[32m+[m[32m        app:layout_constraintStart_toStartOf="parent"[m
+[32m+[m[32m        app:layout_constraintEnd_toEndOf="parent"[m
+[32m+[m[32m        android:layout_marginTop="16dp"/>[m
+[32m+[m
+     <androidx.fragment.app.FragmentContainerView[m
+         android:id="@+id/map"[m
+         android:name="com.google.android.gms.maps.SupportMapFragment"[m
+         android:layout_width="0dp"[m
+         android:layout_height="0dp"[m
+[31m-        app:layout_constraintTop_toTopOf="parent"[m
+[32m+[m[32m        app:layout_constraintTop_toBottomOf="@id/allEventsButton"[m
+         app:layout_constraintBottom_toBottomOf="parent"[m
+         app:layout_constraintStart_toStartOf="parent"[m
+         app:layout_constraintEnd_toEndOf="parent" />[m
+[1mdiff --git a/gradle/libs.versions.toml b/gradle/libs.versions.toml[m
+[1mindex b4235bc..7b7377a 100644[m
+[1m--- a/gradle/libs.versions.toml[m
+[1m+++ b/gradle/libs.versions.toml[m
+[36m@@ -10,6 +10,7 @@[m [mmaterial = "1.10.0"[m
+ constraintlayout = "2.1.4"[m
+ lifecycleLivedataKtx = "2.6.1"[m
+ lifecycleViewmodelKtx = "2.6.1"[m
+[32m+[m[32mworkmanager = "2.9.0"[m
+ [m
+ navigationFragmentKtx = "2.7.7"[m
+ navigationUiKtx = "2.7.7"[m
+[36m@@ -26,6 +27,7 @@[m [mandroidx-lifecycle-livedata-ktx = { group = "androidx.lifecycle", name = "lifecy[m
+ androidx-lifecycle-viewmodel-ktx = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycleViewmodelKtx" }[m
+ androidx-navigation-fragment-ktx = { group = "androidx.navigation", name = "navigation-fragment-ktx", version.ref = "navigationFragmentKtx" }[m
+ androidx-navigation-ui-ktx = { group = "androidx.navigation", name = "navigation-ui-ktx", version.ref = "navigationUiKtx" }[m
+[32m+[m[32mandroidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workmanager"}[m
+ [m
+ [plugins][m
+ android-application = { id = "com.android.application", version.ref = "agp" }[m
