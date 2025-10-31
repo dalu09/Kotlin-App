@@ -1,27 +1,33 @@
 package com.example.kotlinapp.data.repository
 
 import com.example.kotlinapp.data.models.User
-import com.example.kotlinapp.data.serviceadapter.AuthServiceAdapter
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.tasks.await
 
 class AuthRepository {
+    private val firebaseAuth = FirebaseAuth.getInstance()
+    private val firestore = FirebaseFirestore.getInstance()
 
     private val authService = AuthServiceAdapter()
 
     suspend fun createUserInAuth(email: String, password: String): FirebaseUser {
-        return authService.createUserInAuth(email, password)
+        val authResult = firebaseAuth.createUserWithEmailAndPassword(email, password).await()
+        return authResult.user ?: throw Exception("Error al crear el usuario en Authentication.")
     }
 
     suspend fun createUserProfileInFirestore(user: User) {
-        authService.createUserProfileInFirestore(user)
+        firestore.collection("users").document(user.uid).set(user).await()
     }
 
     suspend fun signIn(email: String, password: String): FirebaseUser {
-        return authService.signIn(email, password)
+        val authResult = firebaseAuth.signInWithEmailAndPassword(email.trim(), password).await()
+        return authResult.user ?: throw Exception("No fue posible iniciar sesión.")
     }
 
     suspend fun sendPasswordReset(email: String) {
-        authService.sendPasswordReset(email)
+        firebaseAuth.sendPasswordResetEmail(email.trim()).await()
     }
 
     fun isLoggedIn(): Boolean = authService.isLoggedIn()
@@ -33,7 +39,8 @@ class AuthRepository {
     fun signOut() = authService.signOut()
 
     suspend fun fetchUserProfile(uid: String): User? {
-        return authService.fetchUserProfile(uid)
+        val snap = firestore.collection("users").document(uid).get().await()
+        return snap.toObject(User::class.java)
     }
 
 
