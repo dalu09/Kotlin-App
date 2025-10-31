@@ -5,10 +5,12 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.findNavController
 import com.example.kotlinapp.R
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
@@ -16,6 +18,9 @@ import com.google.android.material.chip.ChipGroup
 class ProfileFragment : Fragment() {
 
     private val viewModel: ProfileViewModel by viewModels()
+
+
+    private lateinit var signOutButton: Button
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -32,9 +37,17 @@ class ProfileFragment : Fragment() {
         val ratingTextView: TextView = view.findViewById(R.id.profile_rating)
         val sportTagsGroup: ChipGroup = view.findViewById(R.id.sport_tags_group)
 
-        // Nuevo método de observadores.
-        setupObservers(usernameTextView, descriptionTextView, ratingTextView, sportTagsGroup)
 
+        signOutButton = view.findViewById(R.id.btnSignOut)
+
+
+        signOutButton.setOnClickListener {
+
+            viewModel.onSignOutClicked()
+        }
+
+
+        setupObservers(usernameTextView, descriptionTextView, ratingTextView, sportTagsGroup)
     }
 
     private fun setupObservers(
@@ -45,7 +58,7 @@ class ProfileFragment : Fragment() {
     ) {
 
         viewModel.user.observe(viewLifecycleOwner) { user ->
-            // Si el usuario es nulo mostrar un estado por defecto.
+
             if (user == null) {
                 usernameTextView.text = "Cargando perfil..."
                 descriptionTextView.text = ""
@@ -62,6 +75,17 @@ class ProfileFragment : Fragment() {
         viewModel.error.observe(viewLifecycleOwner) { errorMessage ->
             errorMessage?.let {
                 Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+            }
+        }
+
+        // AÑADIDO: Observador para el evento de navegación
+        viewModel.navigateToLogin.observe(viewLifecycleOwner) { navigate ->
+            if (navigate == true) {
+
+                findNavController().navigate(R.id.action_global_to_loginFragment)
+
+
+                viewModel.onNavigationComplete()
             }
         }
     }

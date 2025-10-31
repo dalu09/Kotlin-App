@@ -5,6 +5,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.kotlinapp.data.models.User
+import com.example.kotlinapp.data.repository.AuthRepository
 import com.example.kotlinapp.data.service.ProfileServiceAdapter
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.onStart
@@ -13,15 +14,21 @@ import kotlinx.coroutines.launch
 class ProfileViewModel : ViewModel() {
 
     private val serviceAdapter = ProfileServiceAdapter()
+    private val authRepository = AuthRepository()
 
-    // único LiveData que contiene todo el estado del usuario.
+
     private val _user = MutableLiveData<User?>()
     val user: LiveData<User?> = _user
+
 
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
 
-    // carga de datos.
+
+    private val _navigateToLogin = MutableLiveData<Boolean>(false)
+    val navigateToLogin: LiveData<Boolean> = _navigateToLogin
+
+
     init {
         startListeningForUserProfile()
     }
@@ -48,4 +55,14 @@ class ProfileViewModel : ViewModel() {
         }
     }
 
+
+    fun onSignOutClicked() {
+        authRepository.signOut()
+        _navigateToLogin.value = true
+    }
+
+
+    fun onNavigationComplete() {
+        _navigateToLogin.value = false
+    }
 }

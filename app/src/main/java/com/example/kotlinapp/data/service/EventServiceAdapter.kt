@@ -2,6 +2,7 @@ package com.example.kotlinapp.data.service
 
 import android.os.Bundle
 import com.example.kotlinapp.data.models.Event
+import com.example.kotlinapp.data.models.User
 import com.example.kotlinapp.data.models.Venue
 import com.google.firebase.Timestamp
 import com.google.firebase.analytics.FirebaseAnalytics
@@ -9,6 +10,7 @@ import com.google.firebase.analytics.ktx.analytics
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.tasks.await
@@ -16,17 +18,30 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/**
+ * Unified service adapter that provides:
+ *  - low-level event/venue reads
+ *  - booking transaction
+ *  - helper queries (hasUserBooking)
+ *  - recommendation and listing helpers
+ *
+ * Use by creating an instance of FirebaseEventServiceAdapter() or inject it.
+ */
 interface EventServiceAdapter {
-    // Lectura
+    // Reads
     suspend fun fetchEvent(eventId: String): Event?
     suspend fun fetchAllEvents(): List<Event>
     suspend fun fetchVenue(ref: DocumentReference): Venue?
 
-    // Consulta auxiliar
+    // Auxiliary query
     suspend fun hasUserBooking(eventId: String, userId: String): Boolean
 
-    // Escritura
+    // Writes/transactions
     suspend fun runBookingTransaction(eventId: String, userId: String)
+
+    // Recommendations / helpers
+    suspend fun getRecommendedEvents(user: User, limit: Long = 5): List<Event>
+    suspend fun getAllEvents(): List<Event>
 }
 
 class FirebaseEventServiceAdapter(
@@ -34,14 +49,18 @@ class FirebaseEventServiceAdapter(
     private val analytics: FirebaseAnalytics = Firebase.analytics
 ) : EventServiceAdapter {
 
+    private val eventsCol = db.collection("events")
+    private val usersCol = db.collection("users")
+    private val bookedCol = db.collection("booked")
+
     // -------- Lectura --------
     override suspend fun fetchEvent(eventId: String): Event? {
-        val snap = db.collection("events").document(eventId).get().await()
+        val snap = eventsCol.document(eventId).get().await()
         return snap.toObject(Event::class.java)
     }
 
     override suspend fun fetchAllEvents(): List<Event> {
-        val snap = db.collection("events").get().await()
+        val snap = eventsCol.get().await()
         return snap.toObjects(Event::class.java)
     }
 
@@ -52,8 +71,8 @@ class FirebaseEventServiceAdapter(
 
     // -------- Consultas auxiliares --------
     override suspend fun hasUserBooking(eventId: String, userId: String): Boolean {
-        val eventRef = db.collection("events").document(eventId)
-        val userRef  = db.collection("users").document(userId)
+        val eventRef = eventsCol.document(eventId)
+        val userRef = usersCol.document(userId)
 
         val q = db.collection("booked")
             .whereEqualTo("eventId", eventRef)
@@ -73,13 +92,17 @@ class FirebaseEventServiceAdapter(
             putString("user_id", userId)
         })
 
-        val eventsCol = db.collection("events")
-        val bookedCol = db.collection("booked")
-
         db.runTransaction { tx ->
             val eventRef = eventsCol.document(eventId)
             val eventSnap = tx.get(eventRef)
             if (!eventSnap.exists()) throw Exception("Evento no existe")
+
+            // Optionally check capacity before increasing (read current booked and max_capacity)
+            val currentBooked = eventSnap.getLong("booked") ?: 0L
+            val maxCapacity = eventSnap.getLong("max_capacity") ?: Long.MAX_VALUE
+            if (currentBooked >= maxCapacity) {
+                throw Exception("Event is full")
+            }
 
             // Crear booking
             val bookingRef = bookedCol.document()
@@ -87,12 +110,12 @@ class FirebaseEventServiceAdapter(
                 bookingRef,
                 mapOf(
                     "eventId" to eventRef,
-                    "userId" to db.collection("users").document(userId),
+                    "userId" to usersCol.document(userId),
                     "timestamp" to Timestamp.now()
                 )
             )
 
-            // Validar +1 y capacidad
+            // Increment booked atomically
             tx.update(eventRef, "booked", FieldValue.increment(1))
 
             // Marcar usuario único del mes
@@ -109,5 +132,32 @@ class FirebaseEventServiceAdapter(
             )
             null
         }.await()
+    }
+
+    // -------- Recomendaciones / Listados --------
+    override suspend fun getRecommendedEvents(user: User, limit: Long): List<Event> {
+        if (user.sportList.isEmpty()) {
+            return emptyList()
+        }
+
+        // Firestore whereIn supports up to 10 values — ensure user.sportList size <= 10 or trim
+        val sports = if (user.sportList.size > 10) user.sportList.take(10) else user.sportList
+
+        val querySnapshot = eventsCol
+            .whereIn("sport", sports)
+            .limit(limit)
+            .get()
+            .await()
+
+        return querySnapshot.toObjects(Event::class.java)
+    }
+
+    override suspend fun getAllEvents(): List<Event> {
+        val querySnapshot = eventsCol
+            .orderBy("start_time", Query.Direction.ASCENDING)
+            .get()
+            .await()
+
+        return querySnapshot.toObjects(Event::class.java)
     }
 }
