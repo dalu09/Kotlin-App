@@ -19,8 +19,8 @@ class ProfileFragment : Fragment() {
 
     private val viewModel: ProfileViewModel by viewModels()
 
-
     private lateinit var signOutButton: Button
+    private lateinit var editProfileButton: Button
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -36,16 +36,16 @@ class ProfileFragment : Fragment() {
         val descriptionTextView: TextView = view.findViewById(R.id.profile_bio)
         val ratingTextView: TextView = view.findViewById(R.id.profile_rating)
         val sportTagsGroup: ChipGroup = view.findViewById(R.id.sport_tags_group)
-
-
         signOutButton = view.findViewById(R.id.btnSignOut)
-
+        editProfileButton = view.findViewById(R.id.edit_profile_button)
 
         signOutButton.setOnClickListener {
-
             viewModel.onSignOutClicked()
         }
 
+        editProfileButton.setOnClickListener {
+            findNavController().navigate(R.id.action_profileFragment_to_editProfileFragment)
+        }
 
         setupObservers(usernameTextView, descriptionTextView, ratingTextView, sportTagsGroup)
     }
@@ -58,7 +58,6 @@ class ProfileFragment : Fragment() {
     ) {
 
         viewModel.user.observe(viewLifecycleOwner) { user ->
-
             if (user == null) {
                 usernameTextView.text = "Cargando perfil..."
                 descriptionTextView.text = ""
@@ -74,17 +73,14 @@ class ProfileFragment : Fragment() {
 
         viewModel.error.observe(viewLifecycleOwner) { errorMessage ->
             errorMessage?.let {
-                Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+
+                Toast.makeText(requireContext(), it, Toast.LENGTH_LONG).show()
             }
         }
 
-        // AÑADIDO: Observador para el evento de navegación
         viewModel.navigateToLogin.observe(viewLifecycleOwner) { navigate ->
             if (navigate == true) {
-
                 findNavController().navigate(R.id.action_global_to_loginFragment)
-
-
                 viewModel.onNavigationComplete()
             }
         }
@@ -101,7 +97,8 @@ class ProfileFragment : Fragment() {
     private fun updateSportsChips(sports: List<String>, sportTagsGroup: ChipGroup) {
         sportTagsGroup.removeAllViews()
         sports.forEach { sportName ->
-            val chip = Chip(context).apply {
+
+            val chip = Chip(sportTagsGroup.context).apply {
                 text = sportName
                 isClickable = false
             }

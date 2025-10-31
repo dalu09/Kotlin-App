@@ -25,7 +25,7 @@ class EventRepository {
     companion object { private const val TAG = "EventRepository" }
 
     private val db: FirebaseFirestore = FirebaseFirestore.getInstance()
-    // Instancia de Analytics
+
     private val analytics: FirebaseAnalytics = Firebase.analytics
 
     suspend fun getEventById(eventId: String): Result<Event> {
@@ -81,7 +81,7 @@ class EventRepository {
             val eventRef = db.collection("events").document(eventId)
             val userRef = db.collection("users").document(userId)
 
-            // Evitar reservas duplicadas
+
             val alreadyBookedQuery = db.collection("booked")
                 .whereEqualTo("eventId", eventRef)
                 .whereEqualTo("userId", userRef)
