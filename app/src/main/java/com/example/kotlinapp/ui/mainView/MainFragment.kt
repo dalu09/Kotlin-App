@@ -48,7 +48,10 @@ class MainFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         if (isGranted) {
             enableMyLocation(true) // Cargar eventos cercanos después de obtener el permiso
         } else {
-            Toast.makeText(requireContext(), "El permiso de ubicación es necesario para mostrar eventos cercanos", Toast.LENGTH_LONG).show()
+
+            context?.let {
+                Toast.makeText(it, "El permiso de ubicación es necesario para mostrar eventos cercanos", Toast.LENGTH_LONG).show()
+            }
         }
     }
 
@@ -62,6 +65,7 @@ class MainFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         Log.d(TAG, "onViewCreated: Inicializando... ")
+        // MODIFICADO: Usamos 'requireActivity()' que es más seguro en este punto
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
 
         val mapFragment = childFragmentManager.findFragmentById(R.id.map) as? SupportMapFragment
@@ -90,7 +94,7 @@ class MainFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         val eventId = marker.tag as? String
         if (eventId != null) {
             Log.i(TAG, "Marcador clickeado! Navegando al detalle del evento con ID: $eventId")
-            
+
             val bundle = Bundle().apply {
                 putString("event_id", eventId)
             }
@@ -111,7 +115,10 @@ class MainFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
 
         viewModel.error.observe(viewLifecycleOwner) { error ->
             Log.e(TAG, "Observador de ERRORES activado: $error")
-            Toast.makeText(requireContext(), error, Toast.LENGTH_LONG).show()
+            // MODIFICADO: Usamos 'context' (nulable) para evitar crashes
+            context?.let {
+                Toast.makeText(it, error, Toast.LENGTH_LONG).show()
+            }
         }
     }
 
@@ -133,7 +140,7 @@ class MainFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                     .title(event.name)
 
                 customMarkerIcon?.let { markerOptions.icon(it) }
-                
+
                 val marker = gMap?.addMarker(markerOptions)
                 marker?.tag = event.id
 
@@ -143,8 +150,12 @@ class MainFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         }
     }
 
+    // --- FUNCIÓN MODIFICADA ---
     private fun bitmapDescriptorFromVector(vectorResId: Int, width: Int, height: Int): BitmapDescriptor? {
-        return ContextCompat.getDrawable(requireContext(), vectorResId)?.let {
+        // Obtenemos el contexto de forma segura. Si es nulo, la función termina.
+        val localContext = context ?: return null
+
+        return ContextCompat.getDrawable(localContext, vectorResId)?.let {
             it.setBounds(0, 0, width, height)
             val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
@@ -158,7 +169,7 @@ class MainFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         Log.d(TAG, "enableMyLocation: Verificando permisos de ubicación.")
         when {
             ContextCompat.checkSelfPermission(
-                requireContext(),
+                localContext, // Usamos el contexto seguro
                 Manifest.permission.ACCESS_FINE_LOCATION
             ) == PackageManager.PERMISSION_GRANTED -> {
                 gMap?.isMyLocationEnabled = true
