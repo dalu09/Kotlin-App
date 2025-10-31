@@ -11,7 +11,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.viewModels
 import com.example.kotlinapp.R
-import com.example.kotlinapp.data.repository.UserPreferencesRepository
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
@@ -26,7 +25,6 @@ class EventDetailFragment : BottomSheetDialogFragment() {
     private lateinit var participantsText: TextView
     private lateinit var progressBar: ProgressBar
     private lateinit var reserveButton: Button
-    private lateinit var userPreferencesRepository: UserPreferencesRepository
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val dialog = super.onCreateDialog(savedInstanceState) as BottomSheetDialog
@@ -48,8 +46,6 @@ class EventDetailFragment : BottomSheetDialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        userPreferencesRepository = UserPreferencesRepository(requireContext())
 
         titleText = view.findViewById(R.id.eventTitle)
         descriptionText = view.findViewById(R.id.eventDescription)
@@ -77,11 +73,6 @@ class EventDetailFragment : BottomSheetDialogFragment() {
             participantsText.text = participantsString
             progressBar.progress = if (event.max_capacity > 0) (100 * event.booked) / event.max_capacity else 0
             reserveButton.isEnabled = event.booked < event.max_capacity
-
-            // Registrar la preferencia del usuario
-            if (event.sport.isNotBlank()) {
-                userPreferencesRepository.incrementSportView(event.sport)
-            }
         }
 
         viewModel.error.observe(viewLifecycleOwner) { error ->
