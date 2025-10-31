@@ -10,16 +10,16 @@ class AuthRepository {
     private val firebaseAuth = FirebaseAuth.getInstance()
     private val firestore = FirebaseFirestore.getInstance()
 
+    private val authService = AuthServiceAdapter()
+
     suspend fun createUserInAuth(email: String, password: String): FirebaseUser {
         val authResult = firebaseAuth.createUserWithEmailAndPassword(email, password).await()
         return authResult.user ?: throw Exception("Error al crear el usuario en Authentication.")
     }
 
-
     suspend fun createUserProfileInFirestore(user: User) {
         firestore.collection("users").document(user.uid).set(user).await()
     }
-
 
     suspend fun signIn(email: String, password: String): FirebaseUser {
         val authResult = firebaseAuth.signInWithEmailAndPassword(email.trim(), password).await()
@@ -30,17 +30,21 @@ class AuthRepository {
         firebaseAuth.sendPasswordResetEmail(email.trim()).await()
     }
 
-    fun isLoggedIn(): Boolean = firebaseAuth.currentUser != null
+    fun isLoggedIn(): Boolean = authService.isLoggedIn()
 
-    fun currentUser(): FirebaseUser? = firebaseAuth.currentUser
+    fun currentUser(): FirebaseUser? = authService.currentUser()
 
-    fun currentUserId(): String? = firebaseAuth.currentUser?.uid
+    fun currentUserId(): String? = authService.currentUserId()
 
-    fun signOut() = firebaseAuth.signOut()
-
+    fun signOut() = authService.signOut()
 
     suspend fun fetchUserProfile(uid: String): User? {
         val snap = firestore.collection("users").document(uid).get().await()
         return snap.toObject(User::class.java)
+    }
+
+
+    suspend fun updateUserProfile(userId: String, updates: Map<String, Any>) {
+        authService.updateUserProfile(userId, updates)
     }
 }
