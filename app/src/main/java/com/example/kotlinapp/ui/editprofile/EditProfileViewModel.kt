@@ -10,21 +10,16 @@ import kotlinx.coroutines.launch
 
 class EditProfileViewModel : ViewModel() {
 
-
     private val authRepository = AuthRepository()
-
 
     private val _userProfile = MutableLiveData<User?>()
     val userProfile: LiveData<User?> = _userProfile
 
-
     private val _updateState = MutableLiveData<UpdateState>(UpdateState.Idle)
     val updateState: LiveData<UpdateState> = _updateState
 
-
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
-
 
     fun loadUserProfile() {
         viewModelScope.launch {
@@ -44,7 +39,7 @@ class EditProfileViewModel : ViewModel() {
     }
 
 
-    fun updateUserProfile(username: String, description: String, sports: List<String>) {
+    fun updateUserProfile(username: String, description: String, newSportList: List<String>) {
         viewModelScope.launch {
             _updateState.value = UpdateState.Loading
 
@@ -56,29 +51,32 @@ class EditProfileViewModel : ViewModel() {
                 return@launch
             }
 
-
-            if (username.isBlank() || sports.isEmpty()) {
+            if (username.isBlank() || newSportList.isEmpty()) {
                 _updateState.value = UpdateState.Error("Username y Sports no pueden estar vacíos.")
                 return@launch
             }
 
 
-            val updates = mapOf(
+            val oldSportList = currentProfile.sportList
+            val addedSports = newSportList.filter { !oldSportList.contains(it) }
+            val removedSports = oldSportList.filter { !newSportList.contains(it) }
+
+            // Mapa con los datos del perfil a actualizar
+            val profileUpdates = mapOf(
                 "username" to username,
                 "description" to description,
-                "sportList" to sports
+                "sportList" to newSportList
             )
 
             try {
 
-                authRepository.updateUserProfile(userId, updates)
+                authRepository.updateUserProfile(userId, profileUpdates, addedSports, removedSports)
                 _updateState.value = UpdateState.Success
             } catch (e: Exception) {
                 _updateState.value = UpdateState.Error("Error al guardar: ${e.message}")
             }
         }
     }
-
 
     sealed class UpdateState {
         object Idle : UpdateState()
