@@ -12,6 +12,7 @@ class AuthServiceAdapter {
     private val firebaseAuth = FirebaseAuth.getInstance()
     private val firestore = FirebaseFirestore.getInstance()
 
+
     suspend fun createUserInAuth(email: String, password: String): FirebaseUser {
         val authResult = firebaseAuth.createUserWithEmailAndPassword(email, password).await()
         return authResult.user ?: throw Exception("Error al crear el usuario en Authentication.")
@@ -27,49 +28,42 @@ class AuthServiceAdapter {
             val increment = FieldValue.increment(1)
             batch.update(sportCountRef, "userCount", increment)
         }
-        batch.commit().await()
+
+
+        batch.commit()
     }
 
-    // AÑADIDO: Nueva función para actualizar el perfil
-    suspend fun updateUserProfile(userId: String, updates: Map<String, Any>) {
 
-        // Usamos una transacción para asegurar que los contadores y el perfil
-        // se actualicen juntos de forma segura.
+    suspend fun updateUserProfile(userId: String, updates: Map<String, Any>) {
         firestore.runTransaction { transaction ->
             val userRef = firestore.collection("users").document(userId)
 
-            // 1. Leemos el estado actual del usuario
             val snapshot = transaction.get(userRef)
             @Suppress("UNCHECKED_CAST")
             val oldSportList = snapshot.get("sportList") as? List<String> ?: emptyList()
 
-            // 2. Obtenemos la nueva lista de deportes del mapa de "updates"
             @Suppress("UNCHECKED_CAST")
             val newSportList = updates["sportList"] as? List<String> ?: emptyList()
 
-            // 3. Calculamos las diferencias
             val addedSports = newSportList.filter { !oldSportList.contains(it) }
             val removedSports = oldSportList.filter { !newSportList.contains(it) }
 
-            // 4. Actualizamos los contadores para los deportes eliminados
             for (sport in removedSports) {
                 val sportCountRef = firestore.collection("sport_counts").document(sport)
                 val decrement = FieldValue.increment(-1)
                 transaction.update(sportCountRef, "userCount", decrement)
             }
 
-            // 5. Actualizamos los contadores para los deportes añadidos
             for (sport in addedSports) {
                 val sportCountRef = firestore.collection("sport_counts").document(sport)
                 val increment = FieldValue.increment(1)
                 transaction.update(sportCountRef, "userCount", increment)
             }
 
-            // 6. Finalmente, actualizamos el perfil del usuario con todos los cambios
             transaction.update(userRef, updates)
 
-            // La transacción se completa automáticamente
-        }.await()
+        }
+
     }
 
     suspend fun signIn(email: String, password: String): FirebaseUser {
