@@ -37,7 +37,12 @@ class AuthRepository {
     }
 
 
-    suspend fun updateUserProfile(userId: String, updates: Map<String, Any>) {
-        authService.updateUserProfile(userId, updates)
+    suspend fun updateUserProfile(
+        userId: String,
+        updates: Map<String, Any>,
+        addedSports: List<String>,
+        removedSports: List<String>
+    ) {
+        authService.updateUserProfile(userId, updates, addedSports, removedSports)
     }
 }
