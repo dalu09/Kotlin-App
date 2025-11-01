@@ -6,6 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.ImageView // AÑADIDO: Import para la imagen
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
@@ -21,6 +22,7 @@ class ProfileFragment : Fragment() {
 
     private lateinit var signOutButton: Button
     private lateinit var editProfileButton: Button
+    private lateinit var profileImageView: ImageView
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -32,6 +34,7 @@ class ProfileFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+
         val usernameTextView: TextView = view.findViewById(R.id.profile_name)
         val descriptionTextView: TextView = view.findViewById(R.id.profile_bio)
         val ratingTextView: TextView = view.findViewById(R.id.profile_rating)
@@ -39,6 +42,9 @@ class ProfileFragment : Fragment() {
         signOutButton = view.findViewById(R.id.btnSignOut)
         editProfileButton = view.findViewById(R.id.edit_profile_button)
 
+        profileImageView = view.findViewById(R.id.profile_image)
+
+        // --- Listeners ---
         signOutButton.setOnClickListener {
             viewModel.onSignOutClicked()
         }
@@ -47,14 +53,16 @@ class ProfileFragment : Fragment() {
             findNavController().navigate(R.id.action_profileFragment_to_editProfileFragment)
         }
 
-        setupObservers(usernameTextView, descriptionTextView, ratingTextView, sportTagsGroup)
+
+        setupObservers(usernameTextView, descriptionTextView, ratingTextView, sportTagsGroup, profileImageView)
     }
 
     private fun setupObservers(
         usernameTextView: TextView,
         descriptionTextView: TextView,
         ratingTextView: TextView,
-        sportTagsGroup: ChipGroup
+        sportTagsGroup: ChipGroup,
+        profileImageView: ImageView
     ) {
 
         viewModel.user.observe(viewLifecycleOwner) { user ->
@@ -63,6 +71,8 @@ class ProfileFragment : Fragment() {
                 descriptionTextView.text = ""
                 ratingTextView.text = ""
                 sportTagsGroup.removeAllViews()
+
+                profileImageView.setImageResource(R.drawable.profle_default)
             } else {
                 usernameTextView.text = user.username ?: "Nombre no disponible"
                 descriptionTextView.text = user.description ?: "Sin descripción."
@@ -71,9 +81,17 @@ class ProfileFragment : Fragment() {
             }
         }
 
+
+        viewModel.profileImage.observe(viewLifecycleOwner) { bitmap ->
+            if (bitmap != null) {
+                profileImageView.setImageBitmap(bitmap)
+            } else {
+                profileImageView.setImageResource(R.drawable.profle_default)
+            }
+        }
+
         viewModel.error.observe(viewLifecycleOwner) { errorMessage ->
             errorMessage?.let {
-
                 Toast.makeText(requireContext(), it, Toast.LENGTH_LONG).show()
             }
         }
@@ -97,7 +115,6 @@ class ProfileFragment : Fragment() {
     private fun updateSportsChips(sports: List<String>, sportTagsGroup: ChipGroup) {
         sportTagsGroup.removeAllViews()
         sports.forEach { sportName ->
-
             val chip = Chip(sportTagsGroup.context).apply {
                 text = sportName
                 isClickable = false

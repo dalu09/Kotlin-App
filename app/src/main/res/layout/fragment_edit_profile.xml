@@ -26,31 +26,58 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <TextView
-            android:id="@+id/labelUsername"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="32dp"
-            android:text="Username"
-            android:textColor="@android:color/black"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/headerTitle" />
-
-        <EditText
-            android:id="@+id/editUsername"
-            android:layout_width="0dp"
-            android:layout_height="56dp"
-            android:layout_marginTop="8dp"
-            android:background="@drawable/rounded_input_bg"
-            android:hint="Enter username"
-            android:inputType="textPersonName"
-            android:maxLength="20"
-            android:padding="16dp"
+        <androidx.cardview.widget.CardView
+            android:id="@+id/profileImageContainer"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:layout_marginTop="24dp"
+            app:cardCornerRadius="50dp"
+            app:cardElevation="2dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/labelUsername" />
+            app:layout_constraintTop_toBottomOf="@id/headerTitle">
+
+            <ImageView
+                android:id="@+id/profileImageView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:src="@drawable/profle_default"
+                android:contentDescription="Profile Image" />
+
+        </androidx.cardview.widget.CardView>
+
+        <TextView
+            android:id="@+id/textChangePhoto"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Change Photo"
+            android:textColor="?attr/colorPrimary"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toEndOf="@id/profileImageContainer" app:layout_constraintStart_toStartOf="@id/profileImageContainer" app:layout_constraintTop_toBottomOf="@id/profileImageContainer" /> <TextView
+        android:id="@+id/labelUsername"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        android:text="Username"
+        android:textColor="@android:color/black"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/textChangePhoto" /> <EditText
+        android:id="@+id/editUsername"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/rounded_input_bg"
+        android:hint="Enter username"
+        android:inputType="textPersonName"
+        android:maxLength="20"
+        android:padding="16dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/labelUsername" />
 
         <TextView
             android:id="@+id/labelSports"
@@ -105,12 +132,12 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/labelDescription"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
             app:counterEnabled="true"
             app:counterMaxLength="150"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/labelDescription">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/editDescription"
