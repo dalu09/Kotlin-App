@@ -92,6 +92,12 @@
             app:destination="@id/eventDetailFragment" />
     </fragment>
 
+    <!-- Destino para el nuevo fragmento de creación de eventos -->
+    <fragment
+        android:id="@+id/addEventFragment"
+        android:name="com.example.kotlinapp.ui.createEvent.CreateEventFragment"
+        android:label="Create Event"
+        tools:layout="@layout/fragment_create_event" />
 
     <dialog
         android:id="@+id/eventDetailFragment"

@@ -7,14 +7,31 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.RecyclerView
 import com.example.kotlinapp.R
 import com.example.kotlinapp.data.models.Event
+import com.example.kotlinapp.data.repository.EventRepository
+
+// 1. Factory para poder crear el ViewModel con su dependencia (EventRepository)
+class SearchViewModelFactory(private val eventRepository: EventRepository) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(SearchViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return SearchViewModel(eventRepository) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
 
 class SearchFragment : Fragment() {
 
-    private val viewModel: SearchViewModel by viewModels()
+    // 2. Se actualiza la inicialización del ViewModel para que use la Factory
+    private val viewModel: SearchViewModel by viewModels {
+        SearchViewModelFactory(EventRepository(requireContext().applicationContext))
+    }
 
     private lateinit var recommendedAdapter: RecommendedEventsAdapter
     private lateinit var allEventsAdapter: AllEventsAdapter
@@ -30,9 +47,11 @@ class SearchFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         val onEventClicked: (Event) -> Unit = { event ->
-
-            val action = SearchFragmentDirections.actionSearchFragmentToEventDetailFragment(event.id)
-            findNavController().navigate(action)
+            // Asegurarse de que el evento tenga un ID antes de navegar
+            if (event.id.isNotEmpty()) {
+                val action = SearchFragmentDirections.actionSearchFragmentToEventDetailFragment(event.id)
+                findNavController().navigate(action)
+            }
         }
 
         recommendedAdapter = RecommendedEventsAdapter(onEventClicked)
@@ -48,7 +67,6 @@ class SearchFragment : Fragment() {
     }
 
     private fun setupObservers() {
-
         viewModel.recommendedEvents.observe(viewLifecycleOwner) { events ->
             recommendedAdapter.submitList(events)
         }

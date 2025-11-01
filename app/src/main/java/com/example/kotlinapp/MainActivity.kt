@@ -31,31 +31,24 @@ class MainActivity : AppCompatActivity() {
         val navController = navHostFragment.navController
         val bottomNavView = findViewById<BottomNavigationView>(R.id.bottom_nav_view)
 
-
-
         if (savedInstanceState == null) {
             val auth = FirebaseAuth.getInstance()
             if (auth.currentUser != null) {
-
                 navController.navigate(R.id.action_loginFragment_to_mainFragment)
             }
-
         }
 
-
-
         bottomNavView.setupWithNavController(navController)
-
 
         navController.addOnDestinationChangedListener { _, destination, _ ->
             when (destination.id) {
                 R.id.mainFragment,
                 R.id.profileFragment,
                 R.id.searchFragment,
+                R.id.addEventFragment,
                 R.id.eventDetailFragment -> {
                     bottomNavView.visibility = View.VISIBLE
                 }
-
                 else -> {
                     bottomNavView.visibility = View.GONE
                 }
