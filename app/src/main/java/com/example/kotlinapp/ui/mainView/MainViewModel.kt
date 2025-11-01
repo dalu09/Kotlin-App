@@ -6,26 +6,47 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.kotlinapp.data.models.Event
 import com.example.kotlinapp.data.repository.EventRepository
+import com.example.kotlinapp.data.repository.RepositoryResult
+import com.example.kotlinapp.util.MessageWrapper
 import com.google.firebase.firestore.GeoPoint
 import kotlinx.coroutines.launch
 
-class MainViewModel : ViewModel() {
+sealed class MainUiState {
+    object Loading : MainUiState()
+    data class Success(val events: List<Event>) : MainUiState()
+    // Stale ahora contiene un MessageWrapper para el mensaje
+    data class Stale(val events: List<Event>, val message: MessageWrapper<String>) : MainUiState()
+    // Error ahora contiene un MessageWrapper para el mensaje
+    data class Error(val message: MessageWrapper<String>) : MainUiState()
+}
 
-    private val eventRepository = EventRepository()
+class MainViewModel(private val eventRepository: EventRepository) : ViewModel() {
 
-    private val _events = MutableLiveData<List<Event>>()
-    val events: LiveData<List<Event>> get() = _events
-
-    private val _error = MutableLiveData<String>()
-    val error: LiveData<String> get() = _error
+    private val _uiState = MutableLiveData<MainUiState>()
+    val uiState: LiveData<MainUiState> get() = _uiState
 
     fun loadNearbyEvents(userLocation: GeoPoint, radiusInMeters: Double) {
         viewModelScope.launch {
-            val result = eventRepository.getNearbyEvents(userLocation, radiusInMeters)
-            result.onSuccess {
-                _events.postValue(it)
-            }.onFailure {
-                _error.postValue("Error al cargar eventos: ${it.message}")
+            _uiState.postValue(MainUiState.Loading)
+            when (val result = eventRepository.getNearbyEvents(userLocation, radiusInMeters)) {
+                is RepositoryResult.Success -> _uiState.postValue(MainUiState.Success(result.data))
+                // Envuelve el mensaje de "stale" (datos de caché)
+                is RepositoryResult.Stale -> _uiState.postValue(MainUiState.Stale(result.data, MessageWrapper("Estás sin conexión. Mostrando últimos datos guardados.")))
+                // Envuelve el mensaje de error
+                is RepositoryResult.Error -> _uiState.postValue(MainUiState.Error(MessageWrapper(result.message)))
+            }
+        }
+    }
+
+    fun loadAllEvents() {
+        viewModelScope.launch {
+            _uiState.postValue(MainUiState.Loading)
+            when (val result = eventRepository.getAllEvents()) {
+                is RepositoryResult.Success -> _uiState.postValue(MainUiState.Success(result.data))
+                 // Envuelve el mensaje de "stale"
+                is RepositoryResult.Stale -> _uiState.postValue(MainUiState.Stale(result.data, MessageWrapper("Estás sin conexión. Mostrando últimos datos guardados.")))
+                // Envuelve el mensaje de error
+                is RepositoryResult.Error -> _uiState.postValue(MainUiState.Error(MessageWrapper(result.message)))
             }
         }
     }

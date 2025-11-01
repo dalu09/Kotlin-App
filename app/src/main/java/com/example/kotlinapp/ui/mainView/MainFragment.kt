@@ -14,9 +14,13 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import com.example.kotlinapp.R
 import com.example.kotlinapp.data.models.Event
+import com.example.kotlinapp.data.repository.EventRepository
+import com.example.kotlinapp.util.MessageWrapper
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
@@ -29,7 +33,19 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.firestore.GeoPoint
+
+class MainViewModelFactory(private val eventRepository: EventRepository) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(MainViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return MainViewModel(eventRepository) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
 
 class MainFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickListener {
 
@@ -39,7 +55,13 @@ class MainFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
 
     private var gMap: GoogleMap? = null
     private lateinit var fusedLocationClient: FusedLocationProviderClient
-    private val viewModel: MainViewModel by viewModels()
+    private var lastKnownLocation: GeoPoint? = null
+
+    private var isShowingNearby = true
+
+    private val viewModel: MainViewModel by viewModels {
+        MainViewModelFactory(EventRepository(requireContext().applicationContext))
+    }
 
     private val locationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -47,10 +69,7 @@ class MainFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         if (isGranted) {
             enableMyLocation()
         } else {
-
-            context?.let {
-                Toast.makeText(it, "El permiso de ubicación es necesario para mostrar eventos cercanos", Toast.LENGTH_LONG).show()
-            }
+            Toast.makeText(requireContext(), "El permiso de ubicación es necesario", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -63,18 +82,32 @@ class MainFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        Log.d(TAG, "onViewCreated: Inicializando... ")
-        // MODIFICADO: Usamos 'requireActivity()' que es más seguro en este punto
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
-
         val mapFragment = childFragmentManager.findFragmentById(R.id.map) as? SupportMapFragment
         mapFragment?.getMapAsync(this)
-
         setupObservers()
+        setupClickListeners(view)
+    }
+
+    private fun setupClickListeners(view: View) {
+        val toggleButton = view.findViewById<MaterialButton>(R.id.toggleEventsButton)
+        toggleButton.setOnClickListener {
+            isShowingNearby = !isShowingNearby
+            if (isShowingNearby) {
+                toggleButton.text = "Eventos Cercanos"
+                toggleButton.setIconResource(R.drawable.ic_location_nearby)
+                lastKnownLocation?.let {
+                    viewModel.loadNearbyEvents(it, 10000.0)
+                } ?: enableMyLocation()
+            } else {
+                toggleButton.text = "Ver Todos"
+                toggleButton.setIconResource(R.drawable.ic_view_grid)
+                viewModel.loadAllEvents()
+            }
+        }
     }
 
     override fun onMapReady(googleMap: GoogleMap) {
-        Log.d(TAG, "onMapReady: El mapa está listo.")
         gMap = googleMap
         gMap?.setOnMarkerClickListener(this)
         enableMyLocation()
@@ -83,116 +116,108 @@ class MainFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     override fun onMarkerClick(marker: Marker): Boolean {
         val eventId = marker.tag as? String
         if (eventId != null) {
-            Log.i(TAG, "Marcador clickeado! Navegando al detalle del evento con ID: $eventId")
-
-            val bundle = Bundle().apply {
-                putString("event_id", eventId)
-            }
+            val bundle = Bundle().apply { putString("event_id", eventId) }
             findNavController().navigate(R.id.action_mainFragment_to_eventDetailFragment, bundle)
-
-        } else {
-            Log.w(TAG, "Marcador clickeado, pero no tiene un ID de evento en su tag.")
         }
         return false
     }
 
     private fun setupObservers() {
-        Log.d(TAG, "setupObservers: Configurando observadores del ViewModel.")
-        viewModel.events.observe(viewLifecycleOwner) { events ->
-            Log.d(TAG, "Observador de EVENTOS activado. Número de eventos recibidos: ${events.size}")
-            addEventsToMap(events)
-        }
-
-        viewModel.error.observe(viewLifecycleOwner) { error ->
-            Log.e(TAG, "Observador de ERRORES activado: $error")
-            // MODIFICADO: Usamos 'context' (nulable) para evitar crashes
-            context?.let {
-                Toast.makeText(it, error, Toast.LENGTH_LONG).show()
+        viewModel.uiState.observe(viewLifecycleOwner) { state ->
+            when (state) {
+                is MainUiState.Loading -> Log.d(TAG, "Cargando eventos...")
+                is MainUiState.Success -> {
+                    Log.d(TAG, "Eventos cargados desde la red.")
+                    addEventsToMap(state.events)
+                }
+                is MainUiState.Stale -> {
+                    Log.d(TAG, "Mostrando eventos desde la caché.")
+                    addEventsToMap(state.events)
+                    state.message.getContentIfNotHandled()?.let { message ->
+                        showOfflineSnackbar(message)
+                    }
+                }
+                is MainUiState.Error -> {
+                    state.message.getContentIfNotHandled()?.let { errorMessage ->
+                        Log.e(TAG, "Error: $errorMessage")
+                        Toast.makeText(requireContext(), errorMessage, Toast.LENGTH_LONG).show()
+                    }
+                }
             }
+        }
+    }
+
+    private fun showOfflineSnackbar(message: String) {
+        view?.let {
+            Snackbar.make(it, message, Snackbar.LENGTH_INDEFINITE)
+                .setAction("REINTENTAR") {
+                    if (isShowingNearby) {
+                        lastKnownLocation?.let { loc -> viewModel.loadNearbyEvents(loc, 10000.0) }
+                            ?: enableMyLocation()
+                    } else {
+                        viewModel.loadAllEvents()
+                    }
+                }
+                .show()
         }
     }
 
     private fun addEventsToMap(events: List<Event>) {
-        if (gMap == null) {
-            Log.w(TAG, "addEventsToMap llamado pero el mapa (gMap) es nulo.")
-            return
-        }
-        Log.d(TAG, "Añadiendo ${events.size} eventos al mapa.")
         gMap?.clear()
-
         val customMarkerIcon = bitmapDescriptorFromVector(R.drawable.icon_sl, 130, 130)
-
         events.forEach { event ->
             event.location?.let { geoPoint ->
                 val latLng = LatLng(geoPoint.latitude, geoPoint.longitude)
-                Log.d(TAG, "Añadiendo marcador para '${event.name}' (ID: ${event.id}) en Lat=${latLng.latitude}, Lon=${latLng.longitude}")
-
-                val markerOptions = MarkerOptions()
-                    .position(latLng)
-                    .title(event.name)
-
+                val markerOptions = MarkerOptions().position(latLng).title(event.name)
                 customMarkerIcon?.let { markerOptions.icon(it) }
-
                 val marker = gMap?.addMarker(markerOptions)
                 marker?.tag = event.id
-
-            } ?: run {
-                Log.w(TAG, "El evento '${event.name}' (ID: ${event.id}) fue recibido pero NO tiene ubicación (location es null).")
             }
         }
     }
 
-    // --- FUNCIÓN MODIFICADA ---
     private fun bitmapDescriptorFromVector(vectorResId: Int, width: Int, height: Int): BitmapDescriptor? {
-        // Obtenemos el contexto de forma segura. Si es nulo, la función termina.
-        val localContext = context ?: return null
-
-        return ContextCompat.getDrawable(localContext, vectorResId)?.let {
-            it.setBounds(0, 0, width, height)
-            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-            val canvas = Canvas(bitmap)
-            it.draw(canvas)
-            BitmapDescriptorFactory.fromBitmap(bitmap)
+        return context?.let {
+            ContextCompat.getDrawable(it, vectorResId)?.let { drawable ->
+                drawable.setBounds(0, 0, width, height)
+                val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                val canvas = Canvas(bitmap)
+                drawable.draw(canvas)
+                BitmapDescriptorFactory.fromBitmap(bitmap)
+            }
         }
     }
 
-    // --- FUNCIÓN MODIFICADA ---
     private fun enableMyLocation() {
-        // Obtenemos el contexto de forma segura. Si es nulo, la función termina.
-        val localContext = context
-        if (gMap == null || localContext == null) return
+        if (gMap == null || ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+            return
+        }
 
-        Log.d(TAG, "enableMyLocation: Verificando permisos de ubicación.")
-        when {
-            ContextCompat.checkSelfPermission(
-                localContext, // Usamos el contexto seguro
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED -> {
-                Log.d(TAG, "Permiso concedido. Obteniendo ubicación...")
-                gMap?.isMyLocationEnabled = true
+        gMap?.isMyLocationEnabled = true
 
-                fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null).addOnSuccessListener { location ->
-                    if (location != null) {
-                        Log.i(TAG, "¡Ubicación OBTENIDA!: Lat=${location.latitude}, Lon=${location.longitude}")
-                        val userLatLng = LatLng(location.latitude, location.longitude)
-                        gMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(userLatLng, 10f)) // Zoom más alejado
-
-                        val userGeoPoint = GeoPoint(location.latitude, location.longitude)
-                        Log.d(TAG, "Pidiendo al ViewModel que cargue eventos cercanos...")
-                        viewModel.loadNearbyEvents(userGeoPoint, 100000.0)
-
-                    } else {
-                        Log.e(TAG, "¡ERROR CRÍTICO! La ubicación obtenida es NULL.")
-                        // Usamos el contexto seguro
-                        context?.let {
-                            Toast.makeText(it, "No se pudo obtener la ubicación. Asegúrate de tenerla activada.", Toast.LENGTH_LONG).show()
-                        }
-                    }
+        // **LA SOLUCIÓN**: Solo cargar datos si el ViewModel no tiene ya un estado.
+        // Esto previene que se vuelvan a cargar los datos en cada rotación de pantalla.
+        if (viewModel.uiState.value == null) {
+            fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null).addOnSuccessListener { location ->
+                if (location != null) {
+                    val userGeoPoint = GeoPoint(location.latitude, location.longitude)
+                    lastKnownLocation = userGeoPoint
+                    val userLatLng = LatLng(location.latitude, location.longitude)
+                    gMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(userLatLng, 10f))
+                    // La carga inicial siempre será de los eventos cercanos
+                    viewModel.loadNearbyEvents(userGeoPoint, 10000.0)
+                } else {
+                    Toast.makeText(requireContext(), "No se pudo obtener la ubicación.", Toast.LENGTH_LONG).show()
+                    // Si no hay ubicación, cargamos todos los eventos como fallback
+                    viewModel.loadAllEvents()
                 }
             }
-            else -> {
-                Log.d(TAG, "Permiso denegado. Solicitando permiso...")
-                locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        } else {
+            // Si ya hay datos, solo centramos la cámara si tenemos la ubicación
+            lastKnownLocation?.let {
+                val userLatLng = LatLng(it.latitude, it.longitude)
+                gMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(userLatLng, 10f))
             }
         }
     }
