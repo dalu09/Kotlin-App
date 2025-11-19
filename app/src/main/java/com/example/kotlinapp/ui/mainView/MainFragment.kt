@@ -13,7 +13,8 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
+import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.setFragmentResultListener
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
@@ -59,7 +60,7 @@ class MainFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
 
     private var isShowingNearby = true
 
-    private val viewModel: MainViewModel by viewModels {
+    private val viewModel: MainViewModel by activityViewModels {
         MainViewModelFactory(EventRepository(requireContext().applicationContext))
     }
 
@@ -85,8 +86,33 @@ class MainFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
         val mapFragment = childFragmentManager.findFragmentById(R.id.map) as? SupportMapFragment
         mapFragment?.getMapAsync(this)
+
+        setupResultListener(view) // Pasamos la vista aquí
         setupObservers()
         setupClickListeners(view)
+    }
+
+    // Recibimos la vista como parámetro
+    private fun setupResultListener(view: View) {
+        childFragmentManager.setFragmentResultListener(
+            EventListBottomSheetFragment.REQUEST_KEY,
+            viewLifecycleOwner
+        ) { _, bundle ->
+            val eventId = bundle.getString(EventListBottomSheetFragment.KEY_EVENT_ID)
+            eventId?.let {
+                // --- CAMBIO EMPIEZA AQUÍ: Solución a la condición de carrera ---
+                // Postponemos la navegación al siguiente ciclo de la UI para dar tiempo
+                // a que el BottomSheet se cierre por completo.
+                view.post {
+                    // Comprobamos que seguimos en el destino correcto antes de navegar
+                    if (findNavController().currentDestination?.id == R.id.mainFragment) {
+                        val navBundle = Bundle().apply { putString("event_id", it) }
+                        findNavController().navigate(R.id.action_mainFragment_to_eventDetailFragment, navBundle)
+                    }
+                }
+                // --- CAMBIO TERMINA AQUÍ ---
+            }
+        }
     }
 
     private fun setupClickListeners(view: View) {
@@ -114,12 +140,24 @@ class MainFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     }
 
     override fun onMarkerClick(marker: Marker): Boolean {
-        val eventId = marker.tag as? String
-        if (eventId != null) {
-            val bundle = Bundle().apply { putString("event_id", eventId) }
-            findNavController().navigate(R.id.action_mainFragment_to_eventDetailFragment, bundle)
+        val eventIds = marker.tag as? List<*>
+        if (eventIds.isNullOrEmpty()) return true
+
+        if (eventIds.size == 1) {
+            val singleEventId = eventIds.first() as? String
+            singleEventId?.let {
+                val bundle = Bundle().apply { putString("event_id", it) }
+                findNavController().navigate(R.id.action_mainFragment_to_eventDetailFragment, bundle)
+            }
+        } else {
+            val stringEventIds = eventIds.mapNotNull { it as? String }
+            if (stringEventIds.isNotEmpty()) {
+                val bottomSheet = EventListBottomSheetFragment.newInstance(stringEventIds)
+                bottomSheet.show(childFragmentManager, bottomSheet.tag)
+            }
         }
-        return false
+
+        return true
     }
 
     private fun setupObservers() {
@@ -165,13 +203,18 @@ class MainFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     private fun addEventsToMap(events: List<Event>) {
         gMap?.clear()
         val customMarkerIcon = bitmapDescriptorFromVector(R.drawable.icon_sl, 130, 130)
-        events.forEach { event ->
-            event.location?.let { geoPoint ->
-                val latLng = LatLng(geoPoint.latitude, geoPoint.longitude)
-                val markerOptions = MarkerOptions().position(latLng).title(event.name)
+
+        val eventsByLocation = events.groupBy { it.location }
+
+        eventsByLocation.forEach { (geoPoint, eventsAtLocation) ->
+            geoPoint?.let {
+                val latLng = LatLng(it.latitude, it.longitude)
+
+                val markerOptions = MarkerOptions().position(latLng).title(eventsAtLocation.first().name)
                 customMarkerIcon?.let { markerOptions.icon(it) }
+
                 val marker = gMap?.addMarker(markerOptions)
-                marker?.tag = event.id
+                marker?.tag = eventsAtLocation.map { event -> event.id }
             }
         }
     }
@@ -196,8 +239,6 @@ class MainFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
 
         gMap?.isMyLocationEnabled = true
 
-        // **LA SOLUCIÓN**: Solo cargar datos si el ViewModel no tiene ya un estado.
-        // Esto previene que se vuelvan a cargar los datos en cada rotación de pantalla.
         if (viewModel.uiState.value == null) {
             fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null).addOnSuccessListener { location ->
                 if (location != null) {
@@ -205,16 +246,13 @@ class MainFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                     lastKnownLocation = userGeoPoint
                     val userLatLng = LatLng(location.latitude, location.longitude)
                     gMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(userLatLng, 10f))
-                    // La carga inicial siempre será de los eventos cercanos
                     viewModel.loadNearbyEvents(userGeoPoint, 10000.0)
                 } else {
                     Toast.makeText(requireContext(), "No se pudo obtener la ubicación.", Toast.LENGTH_LONG).show()
-                    // Si no hay ubicación, cargamos todos los eventos como fallback
                     viewModel.loadAllEvents()
                 }
             }
         } else {
-            // Si ya hay datos, solo centramos la cámara si tenemos la ubicación
             lastKnownLocation?.let {
                 val userLatLng = LatLng(it.latitude, it.longitude)
                 gMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(userLatLng, 10f))

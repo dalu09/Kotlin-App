@@ -40,10 +40,7 @@ class EventRepository(private val context: Context) {
     private val db: FirebaseFirestore = FirebaseFirestore.getInstance()
     private var cachedEvents: List<Event>? = null
 
-    // --- NUEVAS FUNCIONES PARA EL FORMULARIO ---
-
     suspend fun getSports(): List<String> {
-        // Se asume que el ID del documento en 'sport_counts' es el nombre del deporte
         val snapshot = db.collection("sport_counts").get().await()
         return snapshot.documents.map { it.id }
     }
@@ -57,18 +54,33 @@ class EventRepository(private val context: Context) {
         return snapshot.toObjects(Venue::class.java)
     }
 
+    suspend fun createEvent(event: Event): Result<Unit> {
+        return try {
+            db.collection("events").add(event).await()
+            // Invalidar la caché para forzar la actualización en el mapa
+            cachedEvents = null
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error al crear el evento: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+
     suspend fun getAllEvents(): RepositoryResult<List<Event>> {
+        if (cachedEvents != null) {
+            Log.d(TAG, "Devolviendo ${cachedEvents!!.size} eventos de la caché.")
+            return if (isOnline()) RepositoryResult.Success(cachedEvents!!) else RepositoryResult.Stale(cachedEvents!!)
+        }
+
         if (isOnline()) {
             return try {
-                Log.d(TAG, "Hay conexión. Obteniendo datos base del EventServiceAdapter.")
-                // Obtener los datos de la lista de eventos base (sin ubicación).
+                Log.d(TAG, "Caché vacía y hay conexión. Obteniendo datos de la red.")
                 val baseEvents = eventServiceAdapter.getAllEvents()
 
-                // enriquece la lista con los datos de ubicación.
                 Log.d(TAG, "Enriqueciendo ${baseEvents.size} eventos con datos de ubicación.")
                 val enrichedEvents = enrichEventsWithLocation(baseEvents)
 
-                // 3. Guarda la lista COMPLETA en la caché y la devuelve.
                 cachedEvents = enrichedEvents
                 RepositoryResult.Success(enrichedEvents)
             } catch (e: Exception) {
@@ -76,10 +88,8 @@ class EventRepository(private val context: Context) {
                 RepositoryResult.Error("Error al obtener eventos: ${e.message}")
             }
         } else {
-            return cachedEvents?.let {
-                Log.d(TAG, "No hay conexión. Devolviendo datos de la caché.")
-                RepositoryResult.Stale(it)
-            } ?: RepositoryResult.Error("No hay conexión y la caché está vacía.")
+            // Si la caché es nula y no hay conexión, es un error.
+            return RepositoryResult.Error("No hay conexión y la caché está vacía.")
         }
     }
 
