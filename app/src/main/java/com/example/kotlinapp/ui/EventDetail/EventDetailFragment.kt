@@ -10,15 +10,30 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import com.example.kotlinapp.R
+import com.example.kotlinapp.data.repository.EventRepository
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.firebase.auth.FirebaseAuth
 
+class EventDetailViewModelFactory(private val eventRepository: EventRepository) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(EventDetailViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return EventDetailViewModel(eventRepository) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
+
 class EventDetailFragment : BottomSheetDialogFragment() {
 
-    private val viewModel: EventDetailViewModel by viewModels()
+    private val viewModel: EventDetailViewModel by viewModels {
+        EventDetailViewModelFactory(EventRepository(requireContext().applicationContext))
+    }
 
     private lateinit var titleText: TextView
     private lateinit var descriptionText: TextView
@@ -71,7 +86,12 @@ class EventDetailFragment : BottomSheetDialogFragment() {
             descriptionText.text = event.description
             val participantsString = "${event.booked} / ${event.max_capacity} participantes"
             participantsText.text = participantsString
-            progressBar.progress = if (event.max_capacity > 0) (100 * event.booked) / event.max_capacity else 0
+
+            // --- CAMBIO EMPIEZA AQUÍ: Lógica de la barra de progreso corregida ---
+            progressBar.max = event.max_capacity
+            progressBar.progress = event.booked
+            // --- CAMBIO TERMINA AQUÍ ---
+
             reserveButton.isEnabled = event.booked < event.max_capacity
         }
 

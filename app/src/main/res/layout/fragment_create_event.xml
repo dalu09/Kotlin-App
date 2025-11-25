@@ -37,7 +37,8 @@
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/event_name_edit_text"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content"
+                android:maxLength="50" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <!-- Description -->
@@ -58,7 +59,8 @@
                 android:layout_height="wrap_content"
                 android:gravity="top"
                 android:inputType="textMultiLine"
-                android:lines="3" />
+                android:lines="3"
+                android:maxLength="200" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <!-- Sport -->
