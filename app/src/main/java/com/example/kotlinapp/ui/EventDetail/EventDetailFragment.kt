@@ -87,10 +87,10 @@ class EventDetailFragment : BottomSheetDialogFragment() {
             val participantsString = "${event.booked} / ${event.max_capacity} participantes"
             participantsText.text = participantsString
 
-            // --- CAMBIO EMPIEZA AQUÍ: Lógica de la barra de progreso corregida ---
+
             progressBar.max = event.max_capacity
             progressBar.progress = event.booked
-            // --- CAMBIO TERMINA AQUÍ ---
+
 
             reserveButton.isEnabled = event.booked < event.max_capacity
         }

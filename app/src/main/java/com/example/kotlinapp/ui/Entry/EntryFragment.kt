@@ -20,13 +20,6 @@ class EntryFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Este código ha sido comentado porque EntryFragment ya no forma parte del
-        // flujo de navegación. Ha sido reemplazado por la Splash Screen nativa de Android.
-        // Se recomienda eliminar este archivo (EntryFragment.kt) y su layout (fragment_entry.xml).
-        /*
-        Handler(Looper.getMainLooper()).postDelayed({
-            findNavController().navigate(R.id.action_entryFragment_to_loginFragment)
-        }, 5000) // 5000 milisegundos = 5 segundos
-        */
+
     }
 }

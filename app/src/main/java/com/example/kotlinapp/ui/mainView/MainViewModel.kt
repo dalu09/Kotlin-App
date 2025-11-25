@@ -28,14 +28,14 @@ class MainViewModel(private val eventRepository: EventRepository) : ViewModel() 
     private val _selectedEvents = MutableLiveData<List<Event>>()
     val selectedEvents: LiveData<List<Event>> get() = _selectedEvents
 
-    // --- CAMBIO EMPIEZA AQUÍ: Lógica de navegación con eventos de un solo uso ---
+
     private val _navigateToEventDetail = MutableLiveData<MessageWrapper<String>>()
     val navigateToEventDetail: LiveData<MessageWrapper<String>> get() = _navigateToEventDetail
 
     fun onEventSelectedFromList(eventId: String) {
         _navigateToEventDetail.value = MessageWrapper(eventId)
     }
-    // --- CAMBIO TERMINA AQUÍ ---
+
 
     fun loadNearbyEvents(userLocation: GeoPoint, radiusInMeters: Double) {
         viewModelScope.launch {

@@ -6,7 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
-import android.widget.ImageView // AÑADIDO: Import para la imagen
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
@@ -44,7 +44,7 @@ class ProfileFragment : Fragment() {
 
         profileImageView = view.findViewById(R.id.profile_image)
 
-        // --- Listeners ---
+
         signOutButton.setOnClickListener {
             viewModel.onSignOutClicked()
         }

@@ -17,8 +17,7 @@ class SearchViewModel(private val eventRepository: EventRepository) : ViewModel(
     private val _isOnline = MutableLiveData<Boolean>()
     val isOnline: LiveData<Boolean> = _isOnline
 
-    // 2. La línea que daba error se ha eliminado.
-    // private val eventRepository = EventRepository()
+
     private val profileAdapter = ProfileServiceAdapter()
 
     private val _recommendedEvents = MutableLiveData<List<Event>>()
@@ -38,8 +37,7 @@ class SearchViewModel(private val eventRepository: EventRepository) : ViewModel(
 
     private fun fetchEvents() {
         viewModelScope.launch {
-            // La lógica para eventos recomendados se mantiene,
-            // pero la de 'allEvents' debe manejar el nuevo RepositoryResult.
+
             val userId = profileAdapter.getCurrentUserId()
             if (userId != null) {
                 val user = profileAdapter.getUserProfileFlow(userId).first()
@@ -53,7 +51,7 @@ class SearchViewModel(private val eventRepository: EventRepository) : ViewModel(
                 }
             }
 
-            // 3. Se actualiza la llamada para que sea compatible con la nueva arquitectura
+
             when (val allEventsResult = eventRepository.getAllEvents()) {
                 is RepositoryResult.Success -> _allEvents.value = allEventsResult.data
                 is RepositoryResult.Stale -> _allEvents.value = allEventsResult.data // También mostramos datos de caché

@@ -32,11 +32,9 @@ class EventListBottomSheetFragment : BottomSheetDialogFragment() {
 
         viewModel.selectedEvents.observe(viewLifecycleOwner) { events ->
             eventsRecyclerView.adapter = EventListAdapter(events) { eventId ->
-                // --- CAMBIO EMPIEZA AQUÍ: Arquitectura de FragmentResult ---
-                // 1. Prepara el resultado con el ID del evento.
-                // 2. NO llama a dismiss(). La navegación se encargará de cerrar la pestaña.
+
                 setFragmentResult(REQUEST_KEY, bundleOf(KEY_EVENT_ID to eventId))
-                // --- CAMBIO TERMINA AQUÍ ---
+
             }
         }
 
@@ -46,7 +44,7 @@ class EventListBottomSheetFragment : BottomSheetDialogFragment() {
     }
 
     companion object {
-        // Claves para la comunicación con el MainFragment
+
         const val REQUEST_KEY = "event_list_request"
         const val KEY_EVENT_ID = "event_id"
 

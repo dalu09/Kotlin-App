@@ -52,7 +52,7 @@ class SearchFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         val onEventClicked: (Event) -> Unit = { event ->
-            // Asegurarse de que el evento tenga un ID antes de navegar
+
             if (event.id.isNotEmpty()) {
                 val action = SearchFragmentDirections.actionSearchFragmentToEventDetailFragment(event.id)
                 findNavController().navigate(action)
