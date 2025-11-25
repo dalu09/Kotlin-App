@@ -38,6 +38,29 @@
             app:layout_constraintStart_toStartOf="@id/event_name_text"
             tools:text="Baloncesto" />
 
+        <!-- CONTADOR DE BOOKINGS AÑADIDO -->
+        <ImageView
+            android:id="@+id/icon_booked"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:layout_marginTop="8dp"
+            android:src="@drawable/ic_people"
+            app:tint="?android:attr/textColorSecondary"
+            app:layout_constraintStart_toStartOf="@id/event_name_text"
+            app:layout_constraintTop_toBottomOf="@id/event_sport_text" />
+
+        <TextView
+            android:id="@+id/booked_count_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            tools:text="15 / 30"
+            android:textColor="?android:attr/textColorSecondary"
+            android:textSize="12sp"
+            app:layout_constraintBottom_toBottomOf="@id/icon_booked"
+            app:layout_constraintStart_toEndOf="@id/icon_booked"
+            app:layout_constraintTop_toTopOf="@id/icon_booked" />
+
         <TextView
             android:id="@+id/event_date_text"
             android:layout_width="0dp"
@@ -45,7 +68,7 @@
             android:layout_marginTop="8dp"
             android:layout_marginBottom="16dp"
             android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
-            app:layout_constraintTop_toBottomOf="@id/event_sport_text"
+            app:layout_constraintTop_toBottomOf="@id/icon_booked"
             app:layout_constraintStart_toStartOf="@id/event_name_text"
             app:layout_constraintEnd_toEndOf="@id/event_name_text"
             app:layout_constraintBottom_toBottomOf="parent"
@@ -53,4 +76,3 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </com.google.android.material.card.MaterialCardView>
-    

@@ -14,6 +14,9 @@ import kotlinx.coroutines.launch
 
 class SearchViewModel(private val eventRepository: EventRepository) : ViewModel() {
 
+    private val _isOnline = MutableLiveData<Boolean>()
+    val isOnline: LiveData<Boolean> = _isOnline
+
     // 2. La línea que daba error se ha eliminado.
     // private val eventRepository = EventRepository()
     private val profileAdapter = ProfileServiceAdapter()
@@ -30,6 +33,8 @@ class SearchViewModel(private val eventRepository: EventRepository) : ViewModel(
     init {
         fetchEvents()
     }
+
+
 
     private fun fetchEvents() {
         viewModelScope.launch {

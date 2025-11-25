@@ -1,4 +1,4 @@
-package com.example.kotlinapp.ui.searchTab
+package com.example.kotlinapp.data.service
 
 import android.view.LayoutInflater
 import android.view.View
@@ -50,11 +50,15 @@ class AllEventsAdapter(
         private val nameTextView: TextView = itemView.findViewById(R.id.event_name_text)
         private val sportTextView: TextView = itemView.findViewById(R.id.event_sport_text)
         private val dateTextView: TextView = itemView.findViewById(R.id.event_date_text)
+        private val bookedCountTextView: TextView = itemView.findViewById(R.id.booked_count_text)
 
         fun bind(event: Event) {
             nameTextView.text = event.name
             sportTextView.text = event.sport
             dateTextView.text = "Se jugará el ${event.start_time?.toFormattedString() ?: "fecha no definida"}"
+
+            val bookedText = "${event.booked} / ${event.max_capacity}"
+            bookedCountTextView.text = bookedText
         }
     }
 

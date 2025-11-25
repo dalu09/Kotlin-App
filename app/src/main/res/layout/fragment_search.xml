@@ -13,6 +13,38 @@
         tools:context=".ui.search.SearchFragment">
 
         <TextView
+            android:id="@+id/connection_banner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#EF5350"
+            android:text="No Internet Connection"
+            android:textColor="@android:color/white"
+            android:padding="8dp"
+            android:gravity="center"
+            android:visibility="gone"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <LinearLayout
+            android:id="@+id/no_connection_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:visibility="gone"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="No internet connection. Please check your connection to use the map."
+            android:textAlignment="center"
+            android:textAppearance="?attr/textAppearanceBody1" />
+    </LinearLayout>
+
+        <TextView
             android:id="@+id/recommended_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
