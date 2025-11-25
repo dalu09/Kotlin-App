@@ -21,7 +21,6 @@ import androidx.navigation.fragment.findNavController
 import com.example.kotlinapp.R
 import com.example.kotlinapp.data.models.Event
 import com.example.kotlinapp.data.repository.EventRepository
-import com.example.kotlinapp.util.MessageWrapper
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
@@ -87,30 +86,20 @@ class MainFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         val mapFragment = childFragmentManager.findFragmentById(R.id.map) as? SupportMapFragment
         mapFragment?.getMapAsync(this)
 
-        setupResultListener(view) // Pasamos la vista aquí
+        setupResultListener()
         setupObservers()
         setupClickListeners(view)
     }
 
-    // Recibimos la vista como parámetro
-    private fun setupResultListener(view: View) {
+    private fun setupResultListener() {
         childFragmentManager.setFragmentResultListener(
             EventListBottomSheetFragment.REQUEST_KEY,
             viewLifecycleOwner
         ) { _, bundle ->
             val eventId = bundle.getString(EventListBottomSheetFragment.KEY_EVENT_ID)
             eventId?.let {
-                // --- CAMBIO EMPIEZA AQUÍ: Solución a la condición de carrera ---
-                // Postponemos la navegación al siguiente ciclo de la UI para dar tiempo
-                // a que el BottomSheet se cierre por completo.
-                view.post {
-                    // Comprobamos que seguimos en el destino correcto antes de navegar
-                    if (findNavController().currentDestination?.id == R.id.mainFragment) {
-                        val navBundle = Bundle().apply { putString("event_id", it) }
-                        findNavController().navigate(R.id.action_mainFragment_to_eventDetailFragment, navBundle)
-                    }
-                }
-                // --- CAMBIO TERMINA AQUÍ ---
+                val navBundle = Bundle().apply { putString("event_id", it) }
+                findNavController().navigate(R.id.action_mainFragment_to_eventDetailFragment, navBundle)
             }
         }
     }
