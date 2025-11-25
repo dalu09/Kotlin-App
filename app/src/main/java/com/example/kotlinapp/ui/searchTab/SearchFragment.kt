@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -14,8 +15,9 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.kotlinapp.R
 import com.example.kotlinapp.data.models.Event
 import com.example.kotlinapp.data.repository.EventRepository
+import com.example.kotlinapp.data.service.AllEventsAdapter
+import com.example.kotlinapp.data.service.RecommendedEventsAdapter
 
-// 1. Factory para poder crear el ViewModel con su dependencia (EventRepository)
 class SearchViewModelFactory(private val eventRepository: EventRepository) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(SearchViewModel::class.java)) {
@@ -28,13 +30,16 @@ class SearchViewModelFactory(private val eventRepository: EventRepository) : Vie
 
 class SearchFragment : Fragment() {
 
-    // 2. Se actualiza la inicialización del ViewModel para que use la Factory
     private val viewModel: SearchViewModel by viewModels {
         SearchViewModelFactory(EventRepository(requireContext().applicationContext))
     }
 
     private lateinit var recommendedAdapter: RecommendedEventsAdapter
     private lateinit var allEventsAdapter: AllEventsAdapter
+
+    private lateinit var connectionBanner: TextView
+    private lateinit var noConnectionView: View
+    private lateinit var mapView: View
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
