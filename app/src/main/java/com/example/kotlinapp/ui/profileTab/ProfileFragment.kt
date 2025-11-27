@@ -23,7 +23,6 @@ class ProfileFragment : Fragment() {
 
     private val viewModel: ProfileViewModel by viewModels()
 
-    // ▼▼▼ 1. AÑADIMOS REFERENCIAS PARA LAS NUEVAS VISTAS ▼▼▼
     private lateinit var signOutButton: Button
     private lateinit var editProfileButton: Button
     private lateinit var profileImageView: ImageView
@@ -41,21 +40,19 @@ class ProfileFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Inicialización de vistas existentes
         signOutButton = view.findViewById(R.id.btnSignOut)
         editProfileButton = view.findViewById(R.id.edit_profile_button)
         profileImageView = view.findViewById(R.id.profile_image)
 
-        // ▼▼▼ 2. INICIALIZAMOS LAS VISTAS PARA LOS EVENTOS ▼▼▼
         upcomingEventsRecyclerView = view.findViewById(R.id.upcoming_events_recycler_view)
 
         setupRecyclerView()
         setupClickListeners()
-        setupObservers(view) // Pasamos la vista raíz
+        setupObservers(view)
     }
 
     private fun setupRecyclerView() {
-        // Inicializamos el adapter con una lista vacía
+
         upcomingEventsAdapter = UpcomingEventsAdapter(emptyList())
         upcomingEventsRecyclerView.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
         upcomingEventsRecyclerView.adapter = upcomingEventsAdapter
@@ -70,7 +67,6 @@ class ProfileFragment : Fragment() {
         }
     }
 
-    // Modificamos la firma para no pasar tantas vistas
     private fun setupObservers(rootView: View) {
         val usernameTextView: TextView = rootView.findViewById(R.id.profile_name)
         val descriptionTextView: TextView = rootView.findViewById(R.id.profile_bio)
@@ -84,7 +80,7 @@ class ProfileFragment : Fragment() {
                 updateRatingUI(ratingTextView, user.avgRating, user.numRating)
                 updateSportsChips(user.sportList, sportTagsGroup)
             } else {
-                // Estado de carga o error
+
                 usernameTextView.text = "Cargando perfil..."
                 descriptionTextView.text = ""
                 ratingTextView.text = ""
@@ -100,9 +96,7 @@ class ProfileFragment : Fragment() {
             }
         }
 
-        // ▼▼▼ 3. AÑADIMOS LOS NUEVOS OBSERVADORES PARA LOS EVENTOS ▼▼▼
         viewModel.upcomingEvents.observe(viewLifecycleOwner) { events ->
-
             upcomingEventsAdapter.updateEvents(events)
 
         }

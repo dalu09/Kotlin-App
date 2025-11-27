@@ -36,38 +36,33 @@ class ProfileServiceAdapter {
 
     suspend fun getUpcomingBookedEvents(userId: String): List<Event> {
         return try {
-            // Creamos una referencia al documento del usuario, que es como se guarda en 'booked'
             val userRef = db.collection("users").document(userId)
 
-            // 1. Consulta la colección 'booked' para encontrar las reservas del usuario
             val bookingsSnapshot = db.collection("booked")
-                .whereEqualTo("userId", userRef) // Busca coincidencias exactas con la referencia del usuario
+                .whereEqualTo("userId", userRef)
                 .get()
                 .await()
 
-            // 2. Extrae las referencias a los eventos de los documentos de reserva
             val eventReferences = bookingsSnapshot.documents.mapNotNull { doc ->
                 doc.getDocumentReference("eventId")
             }
 
             if (eventReferences.isEmpty()) {
-                return emptyList() // No hay reservas, no hay nada que mostrar
+                return emptyList()
             }
 
-            // 3. Obtiene los detalles de todos los eventos en una sola consulta eficiente
             val eventsSnapshot = db.collection("events")
                 .whereIn(com.google.firebase.firestore.FieldPath.documentId(), eventReferences)
                 .get()
                 .await()
 
-            // 4. Convierte a objetos 'Event' y filtra solo los que tienen fecha de inicio futura
             val now = Date()
             eventsSnapshot.toObjects(Event::class.java).filter { event ->
                 event.start_time != null && event.start_time.after(now)
             }
         } catch (e: Exception) {
             android.util.Log.e("ProfileService", "Error fetching upcoming events: ${e.message}", e)
-            emptyList() // Devuelve una lista vacía en caso de error para evitar crashes
+            emptyList()
         }
     }
 
