@@ -1,28 +1,35 @@
-// ProfileFragment.kt
 package com.example.kotlinapp.ui.profileTab
 
-import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
-import android.widget.ImageView // AÑADIDO: Import para la imagen
+import android.widget.ImageView
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.example.kotlinapp.R
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
+import android.os.Bundle
 
 class ProfileFragment : Fragment() {
 
     private val viewModel: ProfileViewModel by viewModels()
 
+    // ▼▼▼ 1. AÑADIMOS REFERENCIAS PARA LAS NUEVAS VISTAS ▼▼▼
     private lateinit var signOutButton: Button
     private lateinit var editProfileButton: Button
     private lateinit var profileImageView: ImageView
+    private lateinit var upcomingEventsRecyclerView: RecyclerView
+    private lateinit var eventsProgressBar: ProgressBar
+    private lateinit var upcomingEventsAdapter: UpcomingEventsAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -34,53 +41,56 @@ class ProfileFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-
-        val usernameTextView: TextView = view.findViewById(R.id.profile_name)
-        val descriptionTextView: TextView = view.findViewById(R.id.profile_bio)
-        val ratingTextView: TextView = view.findViewById(R.id.profile_rating)
-        val sportTagsGroup: ChipGroup = view.findViewById(R.id.sport_tags_group)
+        // Inicialización de vistas existentes
         signOutButton = view.findViewById(R.id.btnSignOut)
         editProfileButton = view.findViewById(R.id.edit_profile_button)
-
         profileImageView = view.findViewById(R.id.profile_image)
 
-        // --- Listeners ---
+        // ▼▼▼ 2. INICIALIZAMOS LAS VISTAS PARA LOS EVENTOS ▼▼▼
+        upcomingEventsRecyclerView = view.findViewById(R.id.upcoming_events_recycler_view)
+
+        setupRecyclerView()
+        setupClickListeners()
+        setupObservers(view) // Pasamos la vista raíz
+    }
+
+    private fun setupRecyclerView() {
+        // Inicializamos el adapter con una lista vacía
+        upcomingEventsAdapter = UpcomingEventsAdapter(emptyList())
+        upcomingEventsRecyclerView.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
+        upcomingEventsRecyclerView.adapter = upcomingEventsAdapter
+    }
+
+    private fun setupClickListeners() {
         signOutButton.setOnClickListener {
             viewModel.onSignOutClicked()
         }
-
         editProfileButton.setOnClickListener {
             findNavController().navigate(R.id.action_profileFragment_to_editProfileFragment)
         }
-
-
-        setupObservers(usernameTextView, descriptionTextView, ratingTextView, sportTagsGroup, profileImageView)
     }
 
-    private fun setupObservers(
-        usernameTextView: TextView,
-        descriptionTextView: TextView,
-        ratingTextView: TextView,
-        sportTagsGroup: ChipGroup,
-        profileImageView: ImageView
-    ) {
+    // Modificamos la firma para no pasar tantas vistas
+    private fun setupObservers(rootView: View) {
+        val usernameTextView: TextView = rootView.findViewById(R.id.profile_name)
+        val descriptionTextView: TextView = rootView.findViewById(R.id.profile_bio)
+        val ratingTextView: TextView = rootView.findViewById(R.id.profile_rating)
+        val sportTagsGroup: ChipGroup = rootView.findViewById(R.id.sport_tags_group)
 
         viewModel.user.observe(viewLifecycleOwner) { user ->
-            if (user == null) {
-                usernameTextView.text = "Cargando perfil..."
-                descriptionTextView.text = ""
-                ratingTextView.text = ""
-                sportTagsGroup.removeAllViews()
-
-                profileImageView.setImageResource(R.drawable.profle_default)
-            } else {
+            if (user != null) {
                 usernameTextView.text = user.username ?: "Nombre no disponible"
                 descriptionTextView.text = user.description ?: "Sin descripción."
                 updateRatingUI(ratingTextView, user.avgRating, user.numRating)
                 updateSportsChips(user.sportList, sportTagsGroup)
+            } else {
+                // Estado de carga o error
+                usernameTextView.text = "Cargando perfil..."
+                descriptionTextView.text = ""
+                ratingTextView.text = ""
+                sportTagsGroup.removeAllViews()
             }
         }
-
 
         viewModel.profileImage.observe(viewLifecycleOwner) { bitmap ->
             if (bitmap != null) {
@@ -88,6 +98,13 @@ class ProfileFragment : Fragment() {
             } else {
                 profileImageView.setImageResource(R.drawable.profle_default)
             }
+        }
+
+        // ▼▼▼ 3. AÑADIMOS LOS NUEVOS OBSERVADORES PARA LOS EVENTOS ▼▼▼
+        viewModel.upcomingEvents.observe(viewLifecycleOwner) { events ->
+
+            upcomingEventsAdapter.updateEvents(events)
+
         }
 
         viewModel.error.observe(viewLifecycleOwner) { errorMessage ->
@@ -105,11 +122,7 @@ class ProfileFragment : Fragment() {
     }
 
     private fun updateRatingUI(ratingTextView: TextView, avg: Double, count: Long) {
-        if (count > 0) {
-            ratingTextView.text = "★ %.1f (%d)".format(avg, count)
-        } else {
-            ratingTextView.text = "Sin calificaciones"
-        }
+        ratingTextView.text = if (count > 0) "★ %.1f (%d)".format(avg, count) else "Sin calificaciones"
     }
 
     private fun updateSportsChips(sports: List<String>, sportTagsGroup: ChipGroup) {

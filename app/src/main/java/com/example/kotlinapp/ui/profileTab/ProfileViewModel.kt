@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import com.example.kotlinapp.data.models.Event
 import com.example.kotlinapp.data.models.User
 import com.example.kotlinapp.data.repository.AuthRepository
 import com.example.kotlinapp.data.service.ProfileServiceAdapter
@@ -35,6 +36,9 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     private val _profileImage = MutableLiveData<Bitmap?>(null)
     val profileImage: LiveData<Bitmap?> = _profileImage
 
+    private val _upcomingEvents = MutableLiveData<List<Event>>()
+    val upcomingEvents: LiveData<List<Event>> = _upcomingEvents
+
     init {
         startListeningForUserProfile()
     }
@@ -48,9 +52,8 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
             return
         }
 
-
         loadProfileImage(currentUserId)
-
+        loadUpcomingEvents(currentUserId)
 
         viewModelScope.launch {
             serviceAdapter.getUserProfileFlow(currentUserId)
@@ -64,7 +67,6 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-
     private fun loadProfileImage(userId: String) {
         viewModelScope.launch {
 
@@ -73,6 +75,17 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
             }
 
             _profileImage.value = bitmap
+        }
+    }
+
+    private fun loadUpcomingEvents(userId: String) {
+        viewModelScope.launch {
+
+            val events = withContext(Dispatchers.IO) {
+                serviceAdapter.getUpcomingBookedEvents(userId)
+            }
+            _upcomingEvents.postValue(events)
+
         }
     }
 
