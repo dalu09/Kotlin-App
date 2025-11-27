@@ -1,13 +1,15 @@
 package com.example.kotlinapp.ui.profileTab
 
+import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ImageView
+import android.widget.LinearLayout // AÑADIDO
 import android.widget.TextView
 import android.widget.Toast
-import androidx.core.view.isVisible
+import androidx.core.content.ContextCompat // AÑADIDO
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
@@ -16,7 +18,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.kotlinapp.R
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
-import android.os.Bundle
 
 class ProfileFragment : Fragment() {
 
@@ -26,6 +27,9 @@ class ProfileFragment : Fragment() {
     private lateinit var editProfileButton: Button
     private lateinit var profileImageView: ImageView
     private lateinit var upcomingEventsRecyclerView: RecyclerView
+
+    // AÑADIDO: Variable para el contenedor de eventos publicados
+    private lateinit var postedEventsContainer: LinearLayout
 
     private lateinit var upcomingEventsAdapter: UpcomingEventsAdapter
 
@@ -42,8 +46,10 @@ class ProfileFragment : Fragment() {
         signOutButton = view.findViewById(R.id.btnSignOut)
         editProfileButton = view.findViewById(R.id.edit_profile_button)
         profileImageView = view.findViewById(R.id.profile_image)
-
         upcomingEventsRecyclerView = view.findViewById(R.id.upcoming_events_recycler_view)
+
+        // AÑADIDO: Inicializar el contenedor
+        postedEventsContainer = view.findViewById(R.id.posted_events_container)
 
         setupRecyclerView()
         setupClickListeners()
@@ -51,14 +57,12 @@ class ProfileFragment : Fragment() {
     }
 
     private fun setupRecyclerView() {
-
         upcomingEventsAdapter = UpcomingEventsAdapter(emptyList())
         upcomingEventsRecyclerView.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
         upcomingEventsRecyclerView.adapter = upcomingEventsAdapter
     }
 
     private fun setupClickListeners() {
-
         signOutButton.setOnClickListener {
             viewModel.onSignOutClicked()
         }
@@ -80,7 +84,6 @@ class ProfileFragment : Fragment() {
                 updateRatingUI(ratingTextView, user.avgRating, user.numRating)
                 updateSportsChips(user.sportList, sportTagsGroup)
             } else {
-
                 usernameTextView.text = "Cargando perfil..."
                 descriptionTextView.text = ""
                 ratingTextView.text = ""
@@ -98,7 +101,39 @@ class ProfileFragment : Fragment() {
 
         viewModel.upcomingEvents.observe(viewLifecycleOwner) { events ->
             upcomingEventsAdapter.updateEvents(events)
+        }
 
+        // AÑADIDO: Observador para la lista de eventos publicados (Posted Events)
+        viewModel.postedEvents.observe(viewLifecycleOwner) { events ->
+            // 1. Limpiamos las vistas anteriores
+            postedEventsContainer.removeAllViews()
+
+            if (events.isNullOrEmpty()) {
+                val emptyView = TextView(requireContext()).apply {
+                    text = "No events posted yet."
+                    setPadding(0, 16, 0, 16)
+                }
+                postedEventsContainer.addView(emptyView)
+            } else {
+                // 2. Creamos una vista simple para cada evento
+                events.forEach { event ->
+                    val eventView = TextView(requireContext()).apply {
+                        text = "• ${event.name}"
+                        textSize = 16f
+                        setTextColor(ContextCompat.getColor(context, android.R.color.black))
+                        setPadding(0, 16, 0, 16)
+
+                        // Al hacer clic, vamos al detalle
+                        setOnClickListener {
+                            val bundle = Bundle().apply {
+                                putString("event_id", event.id)
+                            }
+                            findNavController().navigate(R.id.eventDetailFragment, bundle)
+                        }
+                    }
+                    postedEventsContainer.addView(eventView)
+                }
+            }
         }
 
         viewModel.error.observe(viewLifecycleOwner) { errorMessage ->

@@ -153,6 +153,17 @@ class EventRepository(private val context: Context) {
         }
     }
 
+    // --- FUNCIÓN AÑADIDA PARA PERFIL ---
+    suspend fun getPostedEvents(userId: String): Result<List<Event>> {
+        return try {
+            val events = eventServiceAdapter.getEventsByOrganizer(userId)
+            Result.success(events)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error al obtener eventos publicados: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
     suspend fun getEventById(eventId: String): Result<Event> {
         return try {
             val snapshot = db.collection("events").document(eventId).get().await()
@@ -168,13 +179,11 @@ class EventRepository(private val context: Context) {
         return isOnline()
     }
 
-
     suspend fun createBooking(eventId: String, userId: String): Result<Unit> {
         return try {
             val eventRef = db.collection("events").document(eventId)
             val userRef = db.collection("users").document(userId)
 
-            // 1. Verificar si ya reservó
             val alreadyBookedQuery = db.collection("booked")
                 .whereEqualTo("eventId", eventRef)
                 .whereEqualTo("userId", userRef)
@@ -191,7 +200,6 @@ class EventRepository(private val context: Context) {
             })
 
             db.runTransaction { transaction ->
-
                 val newBookingRef = db.collection("booked").document()
                 val bookingData = mapOf(
                     "eventId" to eventRef,
@@ -199,7 +207,6 @@ class EventRepository(private val context: Context) {
                     "timestamp" to FieldValue.serverTimestamp()
                 )
                 transaction.set(newBookingRef, bookingData)
-
 
                 val yyyyMM = SimpleDateFormat("yyyyMM", Locale.getDefault()).format(Date())
                 val monthlyUniqueUserRef = db.collection("monthly_unique_bookers")
@@ -211,7 +218,6 @@ class EventRepository(private val context: Context) {
                     "first_booking_at" to FieldValue.serverTimestamp()
                 )
                 transaction.set(monthlyUniqueUserRef, firstBookingMark, SetOptions.merge())
-
 
                 transaction.update(eventRef, "booked", FieldValue.increment(1))
 

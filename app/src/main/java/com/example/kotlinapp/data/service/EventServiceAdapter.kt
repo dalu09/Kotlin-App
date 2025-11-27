@@ -33,5 +33,18 @@ class EventServiceAdapter {
 
         return querySnapshot.toObjects(Event::class.java)
     }
+
+
+    suspend fun getEventsByOrganizer(userId: String): List<Event> {
+
+        val userRef = db.collection("users").document(userId)
+
+
+        val querySnapshot = eventsCollection
+            .whereEqualTo("organizerid", userRef)
+            .get()
+            .await()
+
+        return querySnapshot.toObjects(Event::class.java)
+    }
 }
-    
