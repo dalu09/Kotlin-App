@@ -26,7 +26,7 @@ class ProfileFragment : Fragment() {
     private lateinit var editProfileButton: Button
     private lateinit var profileImageView: ImageView
     private lateinit var upcomingEventsRecyclerView: RecyclerView
-    private lateinit var eventsProgressBar: ProgressBar
+
     private lateinit var upcomingEventsAdapter: UpcomingEventsAdapter
 
     override fun onCreateView(
