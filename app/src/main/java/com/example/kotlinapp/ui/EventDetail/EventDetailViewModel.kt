@@ -8,10 +8,10 @@ import com.example.kotlinapp.data.models.Event
 import com.example.kotlinapp.data.repository.EventRepository
 import kotlinx.coroutines.launch
 
-// 1. El ViewModel ahora recibe su dependencia (el Repositorio) en el constructor.
+
 class EventDetailViewModel(private val repo: EventRepository) : ViewModel() {
 
-    // Ya no se instancia aquí: private val repo = EventRepository()
+
 
     private val _event = MutableLiveData<Event>()
     val event: LiveData<Event> = _event

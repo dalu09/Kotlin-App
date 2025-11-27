@@ -57,7 +57,6 @@ class EventRepository(private val context: Context) {
     suspend fun createEvent(event: Event): Result<Unit> {
         return try {
             db.collection("events").add(event).await()
-            // Invalidar la caché para forzar la actualización en el mapa
             cachedEvents = null
             Result.success(Unit)
         } catch (e: Exception) {
@@ -88,7 +87,6 @@ class EventRepository(private val context: Context) {
                 RepositoryResult.Error("Error al obtener eventos: ${e.message}")
             }
         } else {
-            // Si la caché es nula y no hay conexión, es un error.
             return RepositoryResult.Error("No hay conexión y la caché está vacía.")
         }
     }
@@ -96,13 +94,12 @@ class EventRepository(private val context: Context) {
     private suspend fun enrichEventsWithLocation(events: List<Event>): List<Event> = coroutineScope {
         events.map { event ->
             async {
-                // Por cada evento, busca su 'venue' para obtener el GeoPoint.
                 event.venueid?.get()?.await()?.toObject(Venue::class.java)?.let { venue ->
                     event.location = GeoPoint(venue.latitude, venue.longitude)
                 }
-                event // Devuelve el evento (modificado o no).
+                event
             }
-        }.awaitAll() // Espera a que todos los trabajos asíncronos terminen.
+        }.awaitAll()
     }
 
     suspend fun getNearbyEvents(userLocation: GeoPoint, radiusInMeters: Double): RepositoryResult<List<Event>> {
@@ -135,7 +132,6 @@ class EventRepository(private val context: Context) {
         val connectivityManager =
             context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
-        // Para Android 10 (API 29) y superior
         val network = connectivityManager.activeNetwork ?: return false
         val activeNetwork = connectivityManager.getNetworkCapabilities(network) ?: return false
 
@@ -172,11 +168,13 @@ class EventRepository(private val context: Context) {
         return isOnline()
     }
 
+
     suspend fun createBooking(eventId: String, userId: String): Result<Unit> {
         return try {
             val eventRef = db.collection("events").document(eventId)
             val userRef = db.collection("users").document(userId)
 
+            // 1. Verificar si ya reservó
             val alreadyBookedQuery = db.collection("booked")
                 .whereEqualTo("eventId", eventRef)
                 .whereEqualTo("userId", userRef)
@@ -193,6 +191,7 @@ class EventRepository(private val context: Context) {
             })
 
             db.runTransaction { transaction ->
+
                 val newBookingRef = db.collection("booked").document()
                 val bookingData = mapOf(
                     "eventId" to eventRef,
@@ -200,6 +199,7 @@ class EventRepository(private val context: Context) {
                     "timestamp" to FieldValue.serverTimestamp()
                 )
                 transaction.set(newBookingRef, bookingData)
+
 
                 val yyyyMM = SimpleDateFormat("yyyyMM", Locale.getDefault()).format(Date())
                 val monthlyUniqueUserRef = db.collection("monthly_unique_bookers")
@@ -211,6 +211,9 @@ class EventRepository(private val context: Context) {
                     "first_booking_at" to FieldValue.serverTimestamp()
                 )
                 transaction.set(monthlyUniqueUserRef, firstBookingMark, SetOptions.merge())
+
+
+                transaction.update(eventRef, "booked", FieldValue.increment(1))
 
                 null
             }.await()
