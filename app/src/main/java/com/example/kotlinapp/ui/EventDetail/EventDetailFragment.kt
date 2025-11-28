@@ -1,5 +1,6 @@
 package com.example.kotlinapp.ui.eventdetail
 
+import android.app.Application
 import android.app.Dialog
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -13,17 +14,17 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.kotlinapp.R
-import com.example.kotlinapp.data.repository.EventRepository
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.firebase.auth.FirebaseAuth
 
-class EventDetailViewModelFactory(private val eventRepository: EventRepository) : ViewModelProvider.Factory {
+
+class EventDetailViewModelFactory(private val application: Application) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(EventDetailViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return EventDetailViewModel(eventRepository) as T
+            return EventDetailViewModel(application) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
@@ -31,12 +32,14 @@ class EventDetailViewModelFactory(private val eventRepository: EventRepository) 
 
 class EventDetailFragment : BottomSheetDialogFragment() {
 
+    // MODIFICADO: Usamos la Fábrica manual pasando la aplicación de la actividad
     private val viewModel: EventDetailViewModel by viewModels {
-        EventDetailViewModelFactory(EventRepository(requireContext().applicationContext))
+        EventDetailViewModelFactory(requireActivity().application)
     }
 
     private lateinit var titleText: TextView
     private lateinit var descriptionText: TextView
+    private lateinit var sportText: TextView
     private lateinit var participantsText: TextView
     private lateinit var progressBar: ProgressBar
     private lateinit var reserveButton: Button
@@ -64,6 +67,7 @@ class EventDetailFragment : BottomSheetDialogFragment() {
 
         titleText = view.findViewById(R.id.eventTitle)
         descriptionText = view.findViewById(R.id.eventDescription)
+        sportText = view.findViewById(R.id.eventSport)
         participantsText = view.findViewById(R.id.participants)
         progressBar = view.findViewById(R.id.progressParticipants)
         reserveButton = view.findViewById(R.id.reserveButton)
@@ -84,13 +88,15 @@ class EventDetailFragment : BottomSheetDialogFragment() {
         viewModel.event.observe(viewLifecycleOwner) { event ->
             titleText.text = event.name
             descriptionText.text = event.description
+
+            // Mostrar el nombre del deporte
+            sportText.text = event.sport
+
             val participantsString = "${event.booked} / ${event.max_capacity} participantes"
             participantsText.text = participantsString
 
-
             progressBar.max = event.max_capacity
             progressBar.progress = event.booked
-
 
             reserveButton.isEnabled = event.booked < event.max_capacity
         }

@@ -1,17 +1,19 @@
 package com.example.kotlinapp.ui.eventdetail
 
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.kotlinapp.data.models.Event
 import com.example.kotlinapp.data.repository.EventRepository
 import kotlinx.coroutines.launch
 
 
-class EventDetailViewModel(private val repo: EventRepository) : ViewModel() {
+class EventDetailViewModel(application: Application) : AndroidViewModel(application) {
 
 
+    private val repo = EventRepository(application)
 
     private val _event = MutableLiveData<Event>()
     val event: LiveData<Event> = _event
