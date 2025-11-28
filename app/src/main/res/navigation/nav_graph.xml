@@ -68,6 +68,10 @@
         <action
             android:id="@+id/action_profileFragment_to_editProfileFragment"
             app:destination="@id/editProfileFragment" />
+
+        <action
+            android:id="@+id/action_profileFragment_to_editEventFragment"
+            app:destination="@id/editEventFragment" />
         <action
             android:id="@+id/action_profileFragment_to_bookedEventDetailFragment"
             app:destination="@id/bookedEventDetailFragment" />
@@ -113,6 +117,16 @@
         android:label="Create Event"
         tools:layout="@layout/fragment_create_event" />
 
+    <fragment
+        android:id="@+id/editEventFragment"
+        android:name="com.example.kotlinapp.ui.editevent.EditEventFragment"
+        android:label="Edit Event"
+        tools:layout="@layout/fragment_edit_event">
+        <argument
+            android:name="event_id"
+            app:argType="string" />
+    </fragment>
+
     <dialog
         android:id="@+id/eventDetailFragment"
         android:name="com.example.kotlinapp.ui.eventdetail.EventDetailFragment"
@@ -122,7 +136,6 @@
             android:name="event_id"
             app:argType="string" />
     </dialog>
-
 
     <action
         android:id="@+id/action_global_to_loginFragment"

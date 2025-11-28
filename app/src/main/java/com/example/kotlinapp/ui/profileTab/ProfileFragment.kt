@@ -28,7 +28,6 @@ class ProfileFragment : Fragment() {
     private lateinit var profileImageView: ImageView
     private lateinit var upcomingEventsRecyclerView: RecyclerView
 
-    
     private lateinit var postedEventsContainer: LinearLayout
 
     private lateinit var upcomingEventsAdapter: UpcomingEventsAdapter
@@ -48,7 +47,6 @@ class ProfileFragment : Fragment() {
         profileImageView = view.findViewById(R.id.profile_image)
         upcomingEventsRecyclerView = view.findViewById(R.id.upcoming_events_recycler_view)
 
-        
         postedEventsContainer = view.findViewById(R.id.posted_events_container)
 
         setupRecyclerView()
@@ -115,10 +113,9 @@ class ProfileFragment : Fragment() {
                 }
                 postedEventsContainer.addView(emptyView)
             } else {
-             
                 events.forEach { event ->
                     val eventView = TextView(requireContext()).apply {
-                        text = "• ${event.name}"
+                        text = "• ${event.name}" // Viñeta para estilo lista
                         textSize = 16f
                         setTextColor(ContextCompat.getColor(context, android.R.color.black))
                         setPadding(0, 16, 0, 16)
@@ -128,7 +125,8 @@ class ProfileFragment : Fragment() {
                             val bundle = Bundle().apply {
                                 putString("event_id", event.id)
                             }
-                            findNavController().navigate(R.id.eventDetailFragment, bundle)
+
+                            findNavController().navigate(R.id.action_profileFragment_to_editEventFragment, bundle)
                         }
                     }
                     postedEventsContainer.addView(eventView)

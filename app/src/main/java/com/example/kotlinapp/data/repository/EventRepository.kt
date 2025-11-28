@@ -67,6 +67,19 @@ class EventRepository(private val context: Context) {
     }
 
 
+    suspend fun updateEvent(eventId: String, updates: Map<String, Any>): Result<Unit> {
+        return try {
+
+            eventServiceAdapter.updateEvent(eventId, updates)
+
+            cachedEvents = null
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error al actualizar evento: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
     suspend fun getAllEvents(): RepositoryResult<List<Event>> {
         if (cachedEvents != null) {
             Log.d(TAG, "Devolviendo ${cachedEvents!!.size} eventos de la caché.")
@@ -154,7 +167,6 @@ class EventRepository(private val context: Context) {
         }
     }
 
-    // --- FUNCIÓN AÑADIDA PARA PERFIL ---
     suspend fun getPostedEvents(userId: String): Result<List<Event>> {
         return try {
             val events = eventServiceAdapter.getEventsByOrganizer(userId)
