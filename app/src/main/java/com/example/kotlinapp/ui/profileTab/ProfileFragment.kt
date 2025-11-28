@@ -6,10 +6,10 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ImageView
-import android.widget.LinearLayout
+import android.widget.LinearLayout 
 import android.widget.TextView
 import android.widget.Toast
-import androidx.core.content.ContextCompat
+import androidx.core.content.ContextCompat 
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
@@ -101,8 +101,9 @@ class ProfileFragment : Fragment() {
             upcomingEventsAdapter.updateEvents(events)
         }
 
-
+      
         viewModel.postedEvents.observe(viewLifecycleOwner) { events ->
+            
             postedEventsContainer.removeAllViews()
 
             if (events.isNullOrEmpty()) {
@@ -119,7 +120,7 @@ class ProfileFragment : Fragment() {
                         setTextColor(ContextCompat.getColor(context, android.R.color.black))
                         setPadding(0, 16, 0, 16)
 
-                        // Al hacer clic, vamos a EDITAR el evento
+                      
                         setOnClickListener {
                             val bundle = Bundle().apply {
                                 putString("event_id", event.id)
