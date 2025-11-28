@@ -12,6 +12,7 @@ import com.example.kotlinapp.data.models.Venue
 import com.example.kotlinapp.data.service.EventServiceAdapter
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.analytics.ktx.analytics
+import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.GeoPoint
@@ -229,6 +230,55 @@ class EventRepository(private val context: Context) {
         } catch (e: Exception) {
             Log.e(TAG, "Error al crear la reserva: ${e.message}", e)
             Result.failure(e)
+        }
+    }
+
+    suspend fun getVenueByReference(venueRef: DocumentReference): Result<Venue?> {
+        return try {
+            val venueSnapshot = venueRef.get().await()
+            val venue = venueSnapshot.toObject(Venue::class.java)
+            Result.success(venue)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching venue by reference: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+
+    suspend fun cancelBooking(eventId: String, userId: String): Result<Unit> {
+        return try {        val eventRef = db.collection("events").document(eventId)
+            val userRef = db.collection("users").document(userId)
+
+            // 1. Primero, encontramos el documento de la reserva que vamos a eliminar.
+            val bookingQuery = db.collection("booked")
+                .whereEqualTo("eventId", eventRef)
+                .whereEqualTo("userId", userRef)
+                .limit(1)
+                .get()
+                .await()
+
+            if (bookingQuery.isEmpty) {
+                // Si no se encuentra la reserva, no se puede cancelar.
+                return Result.failure(Exception("No se encontró una reserva para este evento."))
+            }
+
+            val bookingDocToDelete = bookingQuery.documents.first()
+
+            // 2. Ejecutamos una transacción para garantizar que ambas operaciones (borrar y decrementar) se completen.
+            db.runTransaction { transaction ->
+                // Decrementa el contador 'booked' en el documento del evento.
+                transaction.update(eventRef, "booked", FieldValue.increment(-1))
+
+                // Elimina el documento de la reserva en la colección 'booked'.
+                transaction.delete(bookingDocToDelete.reference)
+
+                null // Éxito de la transacción
+            }.await()
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error al cancelar la reserva: ${e.message}", e)
+            Result.failure(Exception("Error al cancelar la reserva: ${e.message}"))
         }
     }
 }

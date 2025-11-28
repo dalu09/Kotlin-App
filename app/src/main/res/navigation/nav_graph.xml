@@ -68,6 +68,9 @@
         <action
             android:id="@+id/action_profileFragment_to_editProfileFragment"
             app:destination="@id/editProfileFragment" />
+        <action
+            android:id="@+id/action_profileFragment_to_bookedEventDetailFragment"
+            app:destination="@id/bookedEventDetailFragment" />
     </fragment>
 
     <fragment
@@ -92,7 +95,18 @@
             app:destination="@id/eventDetailFragment" />
     </fragment>
 
-    <!-- Destino para el nuevo fragmento de creación de eventos -->
+    <fragment
+        android:id="@+id/bookedEventDetailFragment"
+        android:name="com.example.kotlinapp.ui.bookedEventDetail.BookedEventDetailFragment"
+        android:label="fragment_booked_event_detail"
+        tools:layout="@layout/fragment_booked_event_detail">
+
+        <argument
+            android:name="eventId"
+            app:argType="string" />
+
+    </fragment>
+
     <fragment
         android:id="@+id/addEventFragment"
         android:name="com.example.kotlinapp.ui.createEvent.CreateEventFragment"
