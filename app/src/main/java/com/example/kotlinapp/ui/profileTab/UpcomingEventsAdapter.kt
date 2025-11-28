@@ -6,6 +6,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.kotlinapp.R
+import androidx.navigation.findNavController
 import com.example.kotlinapp.data.models.Event
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -29,11 +30,18 @@ class UpcomingEventsAdapter(private var events: List<Event>) : RecyclerView.Adap
         val event = events[position]
         holder.titleTextView.text = event.name
         holder.dateTextView.text = event.start_time?.let { dateFormat.format(it) } ?: "Fecha no disponible"
+
+        holder.itemView.setOnClickListener {
+            val action =
+                ProfileFragmentDirections.actionProfileFragmentToBookedEventDetailFragment(event.id)
+            it.findNavController().navigate(action)
+        }
     }
 
     override fun getItemCount() = events.size
 
     fun updateEvents(newEvents: List<Event>) {
         events = newEvents
+        notifyDataSetChanged()
     }
 }
