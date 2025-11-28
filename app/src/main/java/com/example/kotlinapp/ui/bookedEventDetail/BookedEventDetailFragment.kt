@@ -4,18 +4,14 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
-import android.widget.ImageView
-import android.widget.ProgressBar
-import android.widget.TextView
 import android.widget.Toast
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
-import com.example.kotlinapp.R
 import com.example.kotlinapp.data.repository.EventRepository
+import com.example.kotlinapp.databinding.FragmentBookedEventDetailBinding
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -26,24 +22,18 @@ class BookedEventDetailFragment : Fragment() {
     }
     private val args: BookedEventDetailFragmentArgs by navArgs()
 
-    private lateinit var loadingSpinner: ProgressBar
-    private lateinit var eventTitle: TextView
-    private lateinit var sportName: TextView
-    private lateinit var eventDate: TextView
-    private lateinit var eventTime: TextView
-    private lateinit var locationName: TextView
-    private lateinit var locationAddress: TextView
-    private lateinit var participantsCount: TextView
-    private lateinit var participantsProgress: ProgressBar
-    private lateinit var eventDescription: TextView
-    private lateinit var cancelButton: Button
-    private lateinit var backArrow: ImageView
+    private var _binding: FragmentBookedEventDetailBinding? = null
+    private val binding get() = _binding!!
+
+    private val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+    private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
-        return inflater.inflate(R.layout.fragment_booked_event_detail, container, false)
+    ): View {
+        _binding = FragmentBookedEventDetailBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -51,68 +41,45 @@ class BookedEventDetailFragment : Fragment() {
 
         val eventId = args.eventId
 
-        initializeViews(view)
         setupClickListeners(eventId)
         setupObservers()
 
         viewModel.loadEventAndVenue(eventId)
     }
 
-    private fun initializeViews(view: View) {
-        loadingSpinner = view.findViewById(R.id.loading_spinner)
-        eventTitle = view.findViewById(R.id.event_title)
-        sportName = view.findViewById(R.id.sport_name)
-        eventDate = view.findViewById(R.id.event_date)
-        eventTime = view.findViewById(R.id.event_time)
-        locationName = view.findViewById(R.id.location_name)
-        locationAddress = view.findViewById(R.id.location_address)
-        participantsCount = view.findViewById(R.id.participants_count)
-        participantsProgress = view.findViewById(R.id.participants_progress)
-        eventDescription = view.findViewById(R.id.event_description)
-        cancelButton = view.findViewById(R.id.cancel_reservation_button)
-        backArrow = view.findViewById(R.id.back_arrow_icon)
-    }
-
     private fun setupClickListeners(eventId: String) {
-        backArrow.setOnClickListener {
+        binding.backArrowIcon.setOnClickListener {
             findNavController().popBackStack()
         }
 
-        cancelButton.setOnClickListener {
+        binding.cancelReservationButton.setOnClickListener {
             viewModel.onCancelBookingClicked(eventId)
         }
     }
 
     private fun setupObservers() {
         viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
-            loadingSpinner.isVisible = isLoading
-
-            cancelButton.isEnabled = !isLoading
+            binding.loadingSpinner.isVisible = isLoading
+            binding.cancelReservationButton.isEnabled = !isLoading
         }
 
         viewModel.eventDetails.observe(viewLifecycleOwner) { details ->
             details?.let {
-
                 val event = it.event
                 val venue = it.venue
 
-                val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-                val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-
-                eventTitle.text = event.name
-                sportName.text = event.sport
-                eventDate.text = event.start_time?.let { date -> dateFormat.format(date) }
-                eventTime.text = event.start_time?.let { date ->
+                binding.eventTitle.text = event.name
+                binding.sportName.text = event.sport
+                binding.eventDate.text = event.start_time?.let { date -> dateFormat.format(date) }
+                binding.eventTime.text = event.start_time?.let { date ->
                     val startTime = timeFormat.format(date)
                     "$startTime - 2 hours"
                 }
-
-                locationName.text = venue?.name ?: "Ubicación no disponible"
-
-                participantsCount.text = "${event.booked} / ${event.max_capacity} participants"
-                participantsProgress.max = event.max_capacity
-                participantsProgress.progress = event.booked
-                eventDescription.text = event.description
+                binding.locationName.text = venue?.name ?: "Ubicación no disponible"
+                binding.participantsCount.text = "${event.booked} / ${event.max_capacity} participants"
+                binding.participantsProgress.max = event.max_capacity
+                binding.participantsProgress.progress = event.booked
+                binding.eventDescription.text = event.description
             }
         }
 
@@ -129,5 +96,11 @@ class BookedEventDetailFragment : Fragment() {
                 findNavController().popBackStack()
             }
         }
+    }
+
+    // 6. Limpiar la referencia en onDestroyView para evitar fugas de memoria
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }
