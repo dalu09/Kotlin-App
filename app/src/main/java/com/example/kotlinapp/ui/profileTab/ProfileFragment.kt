@@ -6,10 +6,10 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ImageView
-import android.widget.LinearLayout 
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import androidx.core.content.ContextCompat 
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
@@ -101,9 +101,9 @@ class ProfileFragment : Fragment() {
             upcomingEventsAdapter.updateEvents(events)
         }
 
-      
+
         viewModel.postedEvents.observe(viewLifecycleOwner) { events ->
-            
+
             postedEventsContainer.removeAllViews()
 
             if (events.isNullOrEmpty()) {
@@ -113,26 +113,36 @@ class ProfileFragment : Fragment() {
                 }
                 postedEventsContainer.addView(emptyView)
             } else {
+                val inflater = LayoutInflater.from(requireContext())
+
                 events.forEach { event ->
-                    val eventView = TextView(requireContext()).apply {
-                        text = "• ${event.name}" // Viñeta para estilo lista
-                        textSize = 16f
-                        setTextColor(ContextCompat.getColor(context, android.R.color.black))
-                        setPadding(0, 16, 0, 16)
 
-                      
-                        setOnClickListener {
-                            val bundle = Bundle().apply {
-                                putString("event_id", event.id)
-                            }
+                    val cardView = inflater.inflate(R.layout.item_posted_event, postedEventsContainer, false)
 
-                            findNavController().navigate(R.id.action_profileFragment_to_editEventFragment, bundle)
+
+                    val nameText = cardView.findViewById<TextView>(R.id.item_event_name)
+                    val sportText = cardView.findViewById<TextView>(R.id.item_event_sport)
+                    val iconSport = cardView.findViewById<ImageView>(R.id.icon_sport)
+
+
+                    nameText.text = event.name
+                    sportText.text = event.sport
+
+
+                    cardView.setOnClickListener {
+                        val bundle = Bundle().apply {
+                            putString("event_id", event.id)
                         }
+
+                        findNavController().navigate(R.id.action_profileFragment_to_editEventFragment, bundle)
                     }
-                    postedEventsContainer.addView(eventView)
+
+
+                    postedEventsContainer.addView(cardView)
                 }
             }
         }
+
 
         viewModel.error.observe(viewLifecycleOwner) { errorMessage ->
             errorMessage?.let {
