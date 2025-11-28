@@ -261,7 +261,7 @@ class EventRepository(private val context: Context) {
         return try {        val eventRef = db.collection("events").document(eventId)
             val userRef = db.collection("users").document(userId)
 
-            // 1. Primero, encontramos el documento de la reserva que vamos a eliminar.
+
             val bookingQuery = db.collection("booked")
                 .whereEqualTo("eventId", eventRef)
                 .whereEqualTo("userId", userRef)
@@ -270,21 +270,21 @@ class EventRepository(private val context: Context) {
                 .await()
 
             if (bookingQuery.isEmpty) {
-                // Si no se encuentra la reserva, no se puede cancelar.
+
                 return Result.failure(Exception("No se encontró una reserva para este evento."))
             }
 
             val bookingDocToDelete = bookingQuery.documents.first()
 
-            // 2. Ejecutamos una transacción para garantizar que ambas operaciones (borrar y decrementar) se completen.
+
             db.runTransaction { transaction ->
-                // Decrementa el contador 'booked' en el documento del evento.
+
                 transaction.update(eventRef, "booked", FieldValue.increment(-1))
 
-                // Elimina el documento de la reserva en la colección 'booked'.
+
                 transaction.delete(bookingDocToDelete.reference)
 
-                null // Éxito de la transacción
+                null
             }.await()
 
             Result.success(Unit)

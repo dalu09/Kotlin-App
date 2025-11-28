@@ -126,7 +126,7 @@ class BookedEventDetailFragment : Fragment() {
         viewModel.cancellationSuccess.observe(viewLifecycleOwner) { hasSucceeded ->
             if (hasSucceeded) {
                 Toast.makeText(context, "Reserva cancelada con éxito", Toast.LENGTH_SHORT).show()
-                findNavController().popBackStack() // Volvemos a la pantalla anterior (perfil)
+                findNavController().popBackStack()
             }
         }
     }

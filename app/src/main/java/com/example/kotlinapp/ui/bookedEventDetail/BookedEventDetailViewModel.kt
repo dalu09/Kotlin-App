@@ -31,7 +31,7 @@ class BookedEventDetailViewModel(private val repo: EventRepository) : ViewModel(
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
 
-    // LiveData para notificar al Fragment que la cancelación fue exitosa y debe navegar hacia atrás.
+
     private val _cancellationSuccess = MutableLiveData<Boolean>()
     val cancellationSuccess: LiveData<Boolean> = _cancellationSuccess
 
@@ -71,7 +71,7 @@ class BookedEventDetailViewModel(private val repo: EventRepository) : ViewModel(
         viewModelScope.launch {
             repo.cancelBooking(eventId, userId)
                 .onSuccess {
-                    _cancellationSuccess.value = true // ¡Éxito! Notificamos al Fragment.
+                    _cancellationSuccess.value = true
                 }
                 .onFailure { e ->
                     _error.value = e.message ?: "No se pudo cancelar la reserva."
