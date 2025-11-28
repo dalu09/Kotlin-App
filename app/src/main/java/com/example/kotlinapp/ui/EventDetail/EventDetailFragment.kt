@@ -32,7 +32,7 @@ class EventDetailViewModelFactory(private val application: Application) : ViewMo
 
 class EventDetailFragment : BottomSheetDialogFragment() {
 
-    // MODIFICADO: Usamos la Fábrica manual pasando la aplicación de la actividad
+
     private val viewModel: EventDetailViewModel by viewModels {
         EventDetailViewModelFactory(requireActivity().application)
     }
@@ -89,7 +89,7 @@ class EventDetailFragment : BottomSheetDialogFragment() {
             titleText.text = event.name
             descriptionText.text = event.description
 
-            // Mostrar el nombre del deporte
+
             sportText.text = event.sport
 
             val participantsString = "${event.booked} / ${event.max_capacity} participantes"

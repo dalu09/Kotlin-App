@@ -6,10 +6,10 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ImageView
-import android.widget.LinearLayout // AÑADIDO
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import androidx.core.content.ContextCompat // AÑADIDO
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
@@ -28,7 +28,6 @@ class ProfileFragment : Fragment() {
     private lateinit var profileImageView: ImageView
     private lateinit var upcomingEventsRecyclerView: RecyclerView
 
-    // AÑADIDO: Variable para el contenedor de eventos publicados
     private lateinit var postedEventsContainer: LinearLayout
 
     private lateinit var upcomingEventsAdapter: UpcomingEventsAdapter
@@ -48,7 +47,6 @@ class ProfileFragment : Fragment() {
         profileImageView = view.findViewById(R.id.profile_image)
         upcomingEventsRecyclerView = view.findViewById(R.id.upcoming_events_recycler_view)
 
-        // AÑADIDO: Inicializar el contenedor
         postedEventsContainer = view.findViewById(R.id.posted_events_container)
 
         setupRecyclerView()
@@ -103,9 +101,8 @@ class ProfileFragment : Fragment() {
             upcomingEventsAdapter.updateEvents(events)
         }
 
-        // AÑADIDO: Observador para la lista de eventos publicados (Posted Events)
+
         viewModel.postedEvents.observe(viewLifecycleOwner) { events ->
-            // 1. Limpiamos las vistas anteriores
             postedEventsContainer.removeAllViews()
 
             if (events.isNullOrEmpty()) {
@@ -115,20 +112,20 @@ class ProfileFragment : Fragment() {
                 }
                 postedEventsContainer.addView(emptyView)
             } else {
-                // 2. Creamos una vista simple para cada evento
                 events.forEach { event ->
                     val eventView = TextView(requireContext()).apply {
-                        text = "• ${event.name}"
+                        text = "• ${event.name}" // Viñeta para estilo lista
                         textSize = 16f
                         setTextColor(ContextCompat.getColor(context, android.R.color.black))
                         setPadding(0, 16, 0, 16)
 
-                        // Al hacer clic, vamos al detalle
+                        // Al hacer clic, vamos a EDITAR el evento
                         setOnClickListener {
                             val bundle = Bundle().apply {
                                 putString("event_id", event.id)
                             }
-                            findNavController().navigate(R.id.eventDetailFragment, bundle)
+
+                            findNavController().navigate(R.id.action_profileFragment_to_editEventFragment, bundle)
                         }
                     }
                     postedEventsContainer.addView(eventView)

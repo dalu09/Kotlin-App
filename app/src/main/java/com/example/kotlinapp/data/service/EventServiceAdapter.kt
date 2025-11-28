@@ -13,7 +13,7 @@ class EventServiceAdapter {
 
     suspend fun getRecommendedEvents(user: User, limit: Long = 5): List<Event> {
         if (user.sportList.isEmpty()) {
-            return emptyList() // No hay deportes, no hay recomendaciones.
+            return emptyList()
         }
 
         val querySnapshot = eventsCollection
@@ -34,11 +34,8 @@ class EventServiceAdapter {
         return querySnapshot.toObjects(Event::class.java)
     }
 
-
     suspend fun getEventsByOrganizer(userId: String): List<Event> {
-
         val userRef = db.collection("users").document(userId)
-
 
         val querySnapshot = eventsCollection
             .whereEqualTo("organizerid", userRef)
@@ -46,5 +43,10 @@ class EventServiceAdapter {
             .await()
 
         return querySnapshot.toObjects(Event::class.java)
+    }
+
+
+    suspend fun updateEvent(eventId: String, updates: Map<String, Any>) {
+        eventsCollection.document(eventId).update(updates).await()
     }
 }
