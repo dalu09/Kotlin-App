@@ -8,38 +8,70 @@ import com.example.kotlinapp.data.models.Event
 import com.example.kotlinapp.data.repository.EventRepository
 import kotlinx.coroutines.launch
 
+sealed class BookingUiState {
+    object AVAILABLE : BookingUiState()
+    object BOOKED : BookingUiState()
+    object OFFLINE : BookingUiState()
+    object LOADING : BookingUiState()
+    data class Error(val message: String) : BookingUiState()
+}
 
 class EventDetailViewModel(private val repo: EventRepository) : ViewModel() {
-
-
 
     private val _event = MutableLiveData<Event>()
     val event: LiveData<Event> = _event
 
-    private val _error = MutableLiveData<String?>()
-    val error: LiveData<String?> = _error
-
-    private val _bookingResult = MutableLiveData<String?>()
-    val bookingResult: LiveData<String?> = _bookingResult
+    private val _bookingUiState = MutableLiveData<BookingUiState>()
+    val bookingUiState: LiveData<BookingUiState> = _bookingUiState
 
     fun loadEvent(eventId: String) {
         viewModelScope.launch {
+            updateButtonState(eventId)
+
             val res = repo.getEventById(eventId)
             res.onSuccess { evt ->
                 _event.value = evt
+                if (repo.isOnline() && evt.booked >= evt.max_capacity && _bookingUiState.value != BookingUiState.BOOKED) {
+                    _bookingUiState.value = BookingUiState.BOOKED 
+                }
             }.onFailure { e ->
-                _error.value = e.message ?: "No se pudo cargar el evento"
+                if (_bookingUiState.value != BookingUiState.OFFLINE) {
+                    _bookingUiState.value = BookingUiState.Error(e.message ?: "Could not load event")
+                }
             }
         }
     }
 
+    private fun updateButtonState(eventId: String) {
+        if (!repo.isOnline()) {
+            _bookingUiState.value = BookingUiState.OFFLINE
+            return
+        }
+        if (repo.isEventBooked(eventId)) {
+            _bookingUiState.value = BookingUiState.BOOKED
+        } else {
+            _bookingUiState.value = BookingUiState.AVAILABLE
+        }
+    }
+
     fun createBooking(eventId: String, userId: String) {
+        if (_bookingUiState.value == BookingUiState.LOADING || _bookingUiState.value == BookingUiState.BOOKED) {
+            return
+        }
+
+        if (!repo.isOnline()) {
+            _bookingUiState.value = BookingUiState.OFFLINE
+            return
+        }
+
         viewModelScope.launch {
+            _bookingUiState.value = BookingUiState.LOADING
             val res = repo.createBooking(eventId, userId)
             res.onSuccess {
-                _bookingResult.value = "Reserva confirmada"
+                _bookingUiState.value = BookingUiState.BOOKED
+                loadEvent(eventId)
             }.onFailure { e ->
-                _error.value = e.message ?: "No se pudo reservar"
+                _bookingUiState.value = BookingUiState.Error(e.message ?: "Could not complete booking")
             }
         }
     }

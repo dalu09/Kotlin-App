@@ -76,7 +76,7 @@ class EventDetailFragment : BottomSheetDialogFragment() {
             viewModel.loadEvent(eventId)
         } else {
             dismiss()
-            Toast.makeText(requireContext(), "Error: No se pudo encontrar el ID del evento.", Toast.LENGTH_LONG).show()
+            Toast.makeText(requireContext(), "Error: Could not find event ID.", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -84,25 +84,39 @@ class EventDetailFragment : BottomSheetDialogFragment() {
         viewModel.event.observe(viewLifecycleOwner) { event ->
             titleText.text = event.name
             descriptionText.text = event.description
-            val participantsString = "${event.booked} / ${event.max_capacity} participantes"
+            val participantsString = "${event.booked} / ${event.max_capacity} participants"
             participantsText.text = participantsString
-
-
             progressBar.max = event.max_capacity
             progressBar.progress = event.booked
-
-
-            reserveButton.isEnabled = event.booked < event.max_capacity
         }
 
-        viewModel.error.observe(viewLifecycleOwner) { error ->
-            error?.let { Toast.makeText(requireContext(), it, Toast.LENGTH_LONG).show() }
-        }
-
-        viewModel.bookingResult.observe(viewLifecycleOwner) { result ->
-            result?.let {
-                Toast.makeText(requireContext(), it, Toast.LENGTH_SHORT).show()
-                arguments?.getString("event_id")?.let { eventId -> viewModel.loadEvent(eventId) }
+        viewModel.bookingUiState.observe(viewLifecycleOwner) { state ->
+            when (state) {
+                is BookingUiState.AVAILABLE -> {
+                    reserveButton.text = "Reserve"
+                    reserveButton.isEnabled = true
+                }
+                is BookingUiState.BOOKED -> {
+                    reserveButton.text = "Reserved"
+                    reserveButton.isEnabled = false
+                }
+                is BookingUiState.LOADING -> {
+                    reserveButton.text = "Reserving..."
+                    reserveButton.isEnabled = false
+                }
+                is BookingUiState.OFFLINE -> {
+                    reserveButton.text = "Reserve"
+                    reserveButton.isEnabled = false
+                    Toast.makeText(requireContext(), "No internet connection.", Toast.LENGTH_SHORT).show()
+                }
+                is BookingUiState.Error -> {
+                    Toast.makeText(requireContext(), state.message, Toast.LENGTH_LONG).show()
+                    reserveButton.text = "Reserve"
+                    reserveButton.isEnabled = true
+                }
+                null -> { 
+                    reserveButton.isEnabled = false 
+                }
             }
         }
     }
@@ -113,10 +127,9 @@ class EventDetailFragment : BottomSheetDialogFragment() {
             val userId = FirebaseAuth.getInstance().currentUser?.uid
 
             if (eventId != null && userId != null) {
-                reserveButton.isEnabled = false
                 viewModel.createBooking(eventId, userId)
-            } else {
-                Toast.makeText(requireContext(), "Error: Debes iniciar sesión para reservar.", Toast.LENGTH_LONG).show()
+            } else if (userId == null) {
+                Toast.makeText(requireContext(), "Error: You must be logged in to book an event.", Toast.LENGTH_LONG).show()
             }
         }
     }
