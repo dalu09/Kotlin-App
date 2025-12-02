@@ -1,27 +1,17 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Tema de la aplicación para el modo oscuro -->
-    <style name="Theme.KotlinApp" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-
-        <item name="colorPrimary">@color/acento</item>
-        <item name="colorPrimaryVariant">@color/acento</item>
-        <item name="colorOnPrimary">@color/principal_oscuro</item>
-
-        <item name="colorSecondary">@color/acento_2</item>
+    <!-- Base application theme. -->
+    <style name="Base.Theme.KotlinApp" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Customize your dark theme here. -->
+        <item name="colorPrimary">@color/principal_oscuro</item>
+        <item name="colorPrimaryVariant">@color/principal</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <!-- Secondary brand color. -->
+        <item name="colorSecondary">@color/acento</item>
         <item name="colorSecondaryVariant">@color/acento_2</item>
-        <item name="colorOnSecondary">@color/white</item>
-
-        <!-- Colores de fondo y superficie OSCUROS -->
-        <item name="android:colorBackground">@color/principal_oscuro</item>
-        <item name="colorSurface">@color/principal_oscuro</item>
-
-        <!-- Colores de texto para fondos OSCUROS -->
-        <item name="colorOnBackground">@color/principal</item>
-        <item name="colorOnSurface">@color/principal</item>
-        <item name="android:textColorSecondary">@color/gris</item>
-
-        <!-- Barra de estado -->
-        <item name="android:statusBarColor">?attr/colorSurface</item>
-        <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
-
+        <item name="colorOnSecondary">@color/black</item>
+        <!-- Status bar color. -->
+        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
     </style>
+
+    <style name="Theme.KotlinApp" parent="Base.Theme.KotlinApp" />
 </resources>

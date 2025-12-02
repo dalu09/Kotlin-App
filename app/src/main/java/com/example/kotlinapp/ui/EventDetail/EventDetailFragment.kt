@@ -26,6 +26,7 @@ class EventDetailFragment : BottomSheetDialogFragment() {
     private lateinit var participantsText: TextView
     private lateinit var progressBar: ProgressBar
     private lateinit var reserveButton: Button
+    private lateinit var offlineBanner: TextView
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val dialog = super.onCreateDialog(savedInstanceState) as BottomSheetDialog
@@ -54,6 +55,7 @@ class EventDetailFragment : BottomSheetDialogFragment() {
         participantsText = view.findViewById(R.id.participants)
         progressBar = view.findViewById(R.id.progressParticipants)
         reserveButton = view.findViewById(R.id.reserveButton)
+        offlineBanner = view.findViewById(R.id.offline_banner)
 
         setupObservers()
         setupClickListeners()
@@ -79,31 +81,29 @@ class EventDetailFragment : BottomSheetDialogFragment() {
         }
 
         viewModel.bookingUiState.observe(viewLifecycleOwner) { state ->
+            offlineBanner.visibility = View.GONE
+
             when (state) {
                 is BookingUiState.AVAILABLE -> {
-                    reserveButton.text = "Reserve"
+                    reserveButton.text = getString(R.string.reserve)
                     reserveButton.isEnabled = true
                 }
                 is BookingUiState.BOOKED -> {
-                    reserveButton.text = "Cancel Booking"
+                    reserveButton.text = getString(R.string.cancel_booking)
                     reserveButton.isEnabled = true
                 }
                 is BookingUiState.LOADING -> {
-                    reserveButton.text = "Processing..."
+                    reserveButton.text = getString(R.string.processing)
                     reserveButton.isEnabled = false
                 }
                 is BookingUiState.OFFLINE -> {
-                    reserveButton.text = "Reserve"
+                    offlineBanner.visibility = View.VISIBLE
                     reserveButton.isEnabled = false
-                    Toast.makeText(requireContext(), "No internet connection.", Toast.LENGTH_SHORT).show()
                 }
                 is BookingUiState.Error -> {
                     Toast.makeText(requireContext(), state.message, Toast.LENGTH_LONG).show()
-                    arguments?.getString("event_id")?.let {
-                        viewModel.loadEvent(it)
-                    } ?: run {
-                        reserveButton.isEnabled = true
-                    }
+                    // The ViewModel now handles reverting the state on failure, 
+                    // so the button will automatically become re-enabled to allow a retry.
                 }
                 null -> {
                     reserveButton.isEnabled = false
@@ -121,12 +121,14 @@ class EventDetailFragment : BottomSheetDialogFragment() {
                 Toast.makeText(requireContext(), "Error: User or event not found.", Toast.LENGTH_LONG).show()
                 return@setOnClickListener
             }
-            
+
+            // ViewModel holds the state. We just trigger the action based on the current state.
             when (viewModel.bookingUiState.value) {
                 is BookingUiState.AVAILABLE -> viewModel.createBooking(eventId, userId)
                 is BookingUiState.BOOKED -> viewModel.cancelBooking(eventId, userId)
-                else -> { 
-                    // Do nothing if loading, offline, or in another state.
+                else -> {
+                    // If offline, the ViewModel will re-check and post the OFFLINE state,
+                    // which will show the banner via the observer. Do nothing here.
                 }
             }
         }
