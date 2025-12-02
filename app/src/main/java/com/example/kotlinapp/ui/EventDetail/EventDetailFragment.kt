@@ -10,33 +10,19 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import com.example.kotlinapp.R
-import com.example.kotlinapp.data.repository.EventRepository
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.firebase.auth.FirebaseAuth
 
-class EventDetailViewModelFactory(private val eventRepository: EventRepository) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(EventDetailViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return EventDetailViewModel(eventRepository) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
-    }
-}
-
 class EventDetailFragment : BottomSheetDialogFragment() {
 
-    private val viewModel: EventDetailViewModel by viewModels {
-        EventDetailViewModelFactory(EventRepository(requireContext().applicationContext))
-    }
+    private val viewModel: EventDetailViewModel by viewModels()
 
     private lateinit var titleText: TextView
     private lateinit var descriptionText: TextView
+    private lateinit var sportText: TextView
     private lateinit var participantsText: TextView
     private lateinit var progressBar: ProgressBar
     private lateinit var reserveButton: Button
@@ -64,6 +50,7 @@ class EventDetailFragment : BottomSheetDialogFragment() {
 
         titleText = view.findViewById(R.id.eventTitle)
         descriptionText = view.findViewById(R.id.eventDescription)
+        sportText = view.findViewById(R.id.eventSport)
         participantsText = view.findViewById(R.id.participants)
         progressBar = view.findViewById(R.id.progressParticipants)
         reserveButton = view.findViewById(R.id.reserveButton)
@@ -84,6 +71,7 @@ class EventDetailFragment : BottomSheetDialogFragment() {
         viewModel.event.observe(viewLifecycleOwner) { event ->
             titleText.text = event.name
             descriptionText.text = event.description
+            sportText.text = event.sport
             val participantsString = "${event.booked} / ${event.max_capacity} participants"
             participantsText.text = participantsString
             progressBar.max = event.max_capacity
@@ -97,11 +85,11 @@ class EventDetailFragment : BottomSheetDialogFragment() {
                     reserveButton.isEnabled = true
                 }
                 is BookingUiState.BOOKED -> {
-                    reserveButton.text = "Reserved"
-                    reserveButton.isEnabled = false
+                    reserveButton.text = "Cancel Booking"
+                    reserveButton.isEnabled = true
                 }
                 is BookingUiState.LOADING -> {
-                    reserveButton.text = "Reserving..."
+                    reserveButton.text = "Processing..."
                     reserveButton.isEnabled = false
                 }
                 is BookingUiState.OFFLINE -> {
@@ -111,11 +99,14 @@ class EventDetailFragment : BottomSheetDialogFragment() {
                 }
                 is BookingUiState.Error -> {
                     Toast.makeText(requireContext(), state.message, Toast.LENGTH_LONG).show()
-                    reserveButton.text = "Reserve"
-                    reserveButton.isEnabled = true
+                    arguments?.getString("event_id")?.let {
+                        viewModel.loadEvent(it)
+                    } ?: run {
+                        reserveButton.isEnabled = true
+                    }
                 }
-                null -> { 
-                    reserveButton.isEnabled = false 
+                null -> {
+                    reserveButton.isEnabled = false
                 }
             }
         }
@@ -126,10 +117,17 @@ class EventDetailFragment : BottomSheetDialogFragment() {
             val eventId = arguments?.getString("event_id")
             val userId = FirebaseAuth.getInstance().currentUser?.uid
 
-            if (eventId != null && userId != null) {
-                viewModel.createBooking(eventId, userId)
-            } else if (userId == null) {
-                Toast.makeText(requireContext(), "Error: You must be logged in to book an event.", Toast.LENGTH_LONG).show()
+            if (eventId == null || userId == null) {
+                Toast.makeText(requireContext(), "Error: User or event not found.", Toast.LENGTH_LONG).show()
+                return@setOnClickListener
+            }
+            
+            when (viewModel.bookingUiState.value) {
+                is BookingUiState.AVAILABLE -> viewModel.createBooking(eventId, userId)
+                is BookingUiState.BOOKED -> viewModel.cancelBooking(eventId, userId)
+                else -> { 
+                    // Do nothing if loading, offline, or in another state.
+                }
             }
         }
     }

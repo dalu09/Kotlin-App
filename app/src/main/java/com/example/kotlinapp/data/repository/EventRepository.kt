@@ -13,6 +13,7 @@ import com.example.kotlinapp.data.models.Venue
 import com.example.kotlinapp.data.service.EventServiceAdapter
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.analytics.ktx.analytics
+import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.GeoPoint
@@ -68,6 +69,17 @@ class EventRepository(private val context: Context) {
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Error creating event: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateEvent(eventId: String, updates: Map<String, Any>): Result<Unit> {
+        return try {
+            eventServiceAdapter.updateEvent(eventId, updates)
+            cachedEvents = null
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error updating event: ${e.message}", e)
             Result.failure(e)
         }
     }
@@ -143,6 +155,16 @@ class EventRepository(private val context: Context) {
         }
     }
 
+    suspend fun getPostedEvents(userId: String): Result<List<Event>> {
+        return try {
+            val events = eventServiceAdapter.getEventsByOrganizer(userId)
+            Result.success(events)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching posted events: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
     suspend fun getEventById(eventId: String): Result<Event> {
         reservedEventsCache[eventId]?.let { return Result.success(it) }
         if (!isOnline()) return Result.failure(Exception("No internet connection to view event details."))
@@ -212,5 +234,50 @@ class EventRepository(private val context: Context) {
         bookedStatusCache.clear()
         reservedEventsCache.clear()
         Log.d(TAG, "Booking and reserved event caches cleared.")
+    }
+
+    suspend fun getVenueByReference(venueRef: DocumentReference): Result<Venue?> {
+        return try {
+            val venueSnapshot = venueRef.get().await()
+            val venue = venueSnapshot.toObject(Venue::class.java)
+            Result.success(venue)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching venue by reference: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun cancelBooking(eventId: String, userId: String): Result<Unit> {
+        return try {
+            val eventRef = db.collection("events").document(eventId)
+            val userRef = db.collection("users").document(userId)
+
+            val bookingQuery = db.collection("booked")
+                .whereEqualTo("eventId", eventRef)
+                .whereEqualTo("userId", userRef)
+                .limit(1)
+                .get()
+                .await()
+
+            if (bookingQuery.isEmpty) {
+                return Result.failure(Exception("Booking not found for this event."))
+            }
+
+            val bookingDocToDelete = bookingQuery.documents.first()
+
+            db.runTransaction { transaction ->
+                transaction.update(eventRef, "booked", FieldValue.increment(-1))
+                transaction.delete(bookingDocToDelete.reference)
+                null
+            }.await()
+            // Remove from cache on cancellation
+            bookedStatusCache.remove(eventId)
+            reservedEventsCache.remove(eventId)
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error cancelling booking: ${e.message}", e)
+            Result.failure(Exception("Error cancelling booking: ${e.message}"))
+        }
     }
 }

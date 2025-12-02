@@ -1,8 +1,9 @@
 package com.example.kotlinapp.ui.eventdetail
 
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.kotlinapp.data.models.Event
 import com.example.kotlinapp.data.repository.EventRepository
@@ -16,7 +17,9 @@ sealed class BookingUiState {
     data class Error(val message: String) : BookingUiState()
 }
 
-class EventDetailViewModel(private val repo: EventRepository) : ViewModel() {
+class EventDetailViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val repo = EventRepository(application)
 
     private val _event = MutableLiveData<Event>()
     val event: LiveData<Event> = _event
@@ -47,10 +50,12 @@ class EventDetailViewModel(private val repo: EventRepository) : ViewModel() {
             _bookingUiState.value = BookingUiState.OFFLINE
             return
         }
-        if (repo.isEventBooked(eventId)) {
-            _bookingUiState.value = BookingUiState.BOOKED
-        } else {
-            _bookingUiState.value = BookingUiState.AVAILABLE
+        viewModelScope.launch {
+            if (repo.isEventBooked(eventId)) {
+                _bookingUiState.value = BookingUiState.BOOKED
+            } else {
+                _bookingUiState.value = BookingUiState.AVAILABLE
+            }
         }
     }
 
@@ -72,6 +77,28 @@ class EventDetailViewModel(private val repo: EventRepository) : ViewModel() {
                 loadEvent(eventId)
             }.onFailure { e ->
                 _bookingUiState.value = BookingUiState.Error(e.message ?: "Could not complete booking")
+            }
+        }
+    }
+
+    fun cancelBooking(eventId: String, userId: String) {
+        if (_bookingUiState.value == BookingUiState.LOADING || _bookingUiState.value != BookingUiState.BOOKED) {
+            return
+        }
+
+        if (!repo.isOnline()) {
+            _bookingUiState.value = BookingUiState.Error("No internet connection to cancel booking.")
+            return
+        }
+
+        viewModelScope.launch {
+            _bookingUiState.value = BookingUiState.LOADING
+            val res = repo.cancelBooking(eventId, userId)
+            res.onSuccess {
+                _bookingUiState.value = BookingUiState.AVAILABLE
+                loadEvent(eventId)
+            }.onFailure { e ->
+                _bookingUiState.value = BookingUiState.Error(e.message ?: "Could not cancel booking")
             }
         }
     }

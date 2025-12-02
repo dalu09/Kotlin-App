@@ -1,4 +1,3 @@
-// ProfileFragment.kt
 package com.example.kotlinapp.ui.profileTab
 
 import android.os.Bundle
@@ -7,11 +6,15 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.example.kotlinapp.R
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
@@ -23,6 +26,11 @@ class ProfileFragment : Fragment() {
     private lateinit var signOutButton: Button
     private lateinit var editProfileButton: Button
     private lateinit var profileImageView: ImageView
+    private lateinit var upcomingEventsRecyclerView: RecyclerView
+
+    private lateinit var postedEventsContainer: LinearLayout
+
+    private lateinit var upcomingEventsAdapter: UpcomingEventsAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -34,53 +42,52 @@ class ProfileFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-
-        val usernameTextView: TextView = view.findViewById(R.id.profile_name)
-        val descriptionTextView: TextView = view.findViewById(R.id.profile_bio)
-        val ratingTextView: TextView = view.findViewById(R.id.profile_rating)
-        val sportTagsGroup: ChipGroup = view.findViewById(R.id.sport_tags_group)
         signOutButton = view.findViewById(R.id.btnSignOut)
         editProfileButton = view.findViewById(R.id.edit_profile_button)
-
         profileImageView = view.findViewById(R.id.profile_image)
+        upcomingEventsRecyclerView = view.findViewById(R.id.upcoming_events_recycler_view)
 
+        postedEventsContainer = view.findViewById(R.id.posted_events_container)
 
+        setupRecyclerView()
+        setupClickListeners()
+        setupObservers(view)
+    }
+
+    private fun setupRecyclerView() {
+        upcomingEventsAdapter = UpcomingEventsAdapter(emptyList())
+        upcomingEventsRecyclerView.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
+        upcomingEventsRecyclerView.adapter = upcomingEventsAdapter
+    }
+
+    private fun setupClickListeners() {
         signOutButton.setOnClickListener {
             viewModel.onSignOutClicked()
         }
-
         editProfileButton.setOnClickListener {
             findNavController().navigate(R.id.action_profileFragment_to_editProfileFragment)
         }
-
-
-        setupObservers(usernameTextView, descriptionTextView, ratingTextView, sportTagsGroup, profileImageView)
     }
 
-    private fun setupObservers(
-        usernameTextView: TextView,
-        descriptionTextView: TextView,
-        ratingTextView: TextView,
-        sportTagsGroup: ChipGroup,
-        profileImageView: ImageView
-    ) {
+    private fun setupObservers(rootView: View) {
+        val usernameTextView: TextView = rootView.findViewById(R.id.profile_name)
+        val descriptionTextView: TextView = rootView.findViewById(R.id.profile_bio)
+        val ratingTextView: TextView = rootView.findViewById(R.id.profile_rating)
+        val sportTagsGroup: ChipGroup = rootView.findViewById(R.id.sport_tags_group)
 
         viewModel.user.observe(viewLifecycleOwner) { user ->
-            if (user == null) {
-                usernameTextView.text = "Cargando perfil..."
-                descriptionTextView.text = ""
-                ratingTextView.text = ""
-                sportTagsGroup.removeAllViews()
-
-                profileImageView.setImageResource(R.drawable.profle_default)
-            } else {
+            if (user != null) {
                 usernameTextView.text = user.username ?: "Nombre no disponible"
                 descriptionTextView.text = user.description ?: "Sin descripción."
                 updateRatingUI(ratingTextView, user.avgRating, user.numRating)
                 updateSportsChips(user.sportList, sportTagsGroup)
+            } else {
+                usernameTextView.text = "Cargando perfil..."
+                descriptionTextView.text = ""
+                ratingTextView.text = ""
+                sportTagsGroup.removeAllViews()
             }
         }
-
 
         viewModel.profileImage.observe(viewLifecycleOwner) { bitmap ->
             if (bitmap != null) {
@@ -89,6 +96,53 @@ class ProfileFragment : Fragment() {
                 profileImageView.setImageResource(R.drawable.profle_default)
             }
         }
+
+        viewModel.upcomingEvents.observe(viewLifecycleOwner) { events ->
+            upcomingEventsAdapter.updateEvents(events)
+        }
+
+
+        viewModel.postedEvents.observe(viewLifecycleOwner) { events ->
+
+            postedEventsContainer.removeAllViews()
+
+            if (events.isNullOrEmpty()) {
+                val emptyView = TextView(requireContext()).apply {
+                    text = "No events posted yet."
+                    setPadding(0, 16, 0, 16)
+                }
+                postedEventsContainer.addView(emptyView)
+            } else {
+                val inflater = LayoutInflater.from(requireContext())
+
+                events.forEach { event ->
+
+                    val cardView = inflater.inflate(R.layout.item_posted_event, postedEventsContainer, false)
+
+
+                    val nameText = cardView.findViewById<TextView>(R.id.item_event_name)
+                    val sportText = cardView.findViewById<TextView>(R.id.item_event_sport)
+                    val iconSport = cardView.findViewById<ImageView>(R.id.icon_sport)
+
+
+                    nameText.text = event.name
+                    sportText.text = event.sport
+
+
+                    cardView.setOnClickListener {
+                        val bundle = Bundle().apply {
+                            putString("event_id", event.id)
+                        }
+
+                        findNavController().navigate(R.id.action_profileFragment_to_editEventFragment, bundle)
+                    }
+
+
+                    postedEventsContainer.addView(cardView)
+                }
+            }
+        }
+
 
         viewModel.error.observe(viewLifecycleOwner) { errorMessage ->
             errorMessage?.let {
@@ -105,11 +159,7 @@ class ProfileFragment : Fragment() {
     }
 
     private fun updateRatingUI(ratingTextView: TextView, avg: Double, count: Long) {
-        if (count > 0) {
-            ratingTextView.text = "★ %.1f (%d)".format(avg, count)
-        } else {
-            ratingTextView.text = "Sin calificaciones"
-        }
+        ratingTextView.text = if (count > 0) "★ %.1f (%d)".format(avg, count) else "Sin calificaciones"
     }
 
     private fun updateSportsChips(sports: List<String>, sportTagsGroup: ChipGroup) {
