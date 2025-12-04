@@ -13,13 +13,16 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 import java.util.Date
 
-// Estado para el formulario de creación de eventos
+sealed class CreateEventUiState {
+    object IDLE : CreateEventUiState()
+    object SUCCESS : CreateEventUiState()
+    data class ERROR(val message: String, val isFatal: Boolean = false) : CreateEventUiState()
+}
+
 data class CreateEventFormState(
     val sports: List<String> = emptyList(),
     val skillLevels: List<String> = emptyList(),
     val venues: List<Venue> = emptyList(),
-    val isEventCreated: Boolean = false,
-    val error: String? = null
 )
 
 class CreateEventViewModel(private val eventRepository: EventRepository) : ViewModel() {
@@ -27,22 +30,24 @@ class CreateEventViewModel(private val eventRepository: EventRepository) : ViewM
     private val _formState = MutableLiveData<CreateEventFormState>()
     val formState: LiveData<CreateEventFormState> = _formState
 
+    private val _uiState = MutableLiveData<CreateEventUiState>(CreateEventUiState.IDLE)
+    val uiState: LiveData<CreateEventUiState> = _uiState
+
     fun loadInitialData() {
         viewModelScope.launch {
+            if (!eventRepository.isOnline()) {
+                _uiState.value = CreateEventUiState.ERROR("No internet connection to load required data.", isFatal = true)
+                return@launch
+            }
+            
             try {
                 val sports = eventRepository.getSports()
                 val skillLevels = eventRepository.getSkillLevels()
                 val venues = eventRepository.getVenues()
-
-                _formState.postValue(
-                    CreateEventFormState(
-                        sports = sports,
-                        skillLevels = skillLevels,
-                        venues = venues
-                    )
-                )
+                _formState.postValue(CreateEventFormState(sports, skillLevels, venues))
+                _uiState.value = CreateEventUiState.IDLE
             } catch (e: Exception) {
-                _formState.postValue(CreateEventFormState(error = "Failed to load form data: ${e.message}"))
+                _uiState.value = CreateEventUiState.ERROR("Failed to load form data: ${e.message}", isFatal = true)
             }
         }
     }
@@ -57,44 +62,37 @@ class CreateEventViewModel(private val eventRepository: EventRepository) : ViewM
         startTime: Date?,
         endTime: Date?
     ) {
+        if (!eventRepository.isOnline()) {
+            _uiState.value = CreateEventUiState.ERROR("No internet connection to create event.")
+            return
+        }
+
         if (name.isBlank() || description.isBlank() || sport.isBlank() || skillLevel.isBlank() || venueName.isBlank() || maxParticipants.isBlank() || startTime == null || endTime == null) {
-            _formState.value = _formState.value?.copy(error = "Please fill all fields")
+            _uiState.value = CreateEventUiState.ERROR("Please fill all fields")
             return
         }
-
-        if (name.length > 50) {
-            _formState.value = _formState.value?.copy(error = "Event name cannot exceed 50 characters")
-            return
-        }
-
-        if (description.length > 200) {
-            _formState.value = _formState.value?.copy(error = "Description cannot exceed 200 characters")
-            return
-        }
-
         if (endTime.before(startTime) || endTime == startTime) {
-            _formState.value = _formState.value?.copy(error = "End time must be after the start time")
+            _uiState.value = CreateEventUiState.ERROR("End time must be after the start time")
             return
         }
-
         val participants = maxParticipants.toIntOrNull()
         if (participants == null || participants <= 0) {
-            _formState.value = _formState.value?.copy(error = "Invalid number of participants")
+            _uiState.value = CreateEventUiState.ERROR("Invalid number of participants")
             return
         }
-
         val userId = FirebaseAuth.getInstance().currentUser?.uid
         if (userId == null) {
-            _formState.value = _formState.value?.copy(error = "User not logged in")
+            _uiState.value = CreateEventUiState.ERROR("You must be logged in to create an event")
             return
         }
-        val organizerRef: DocumentReference = FirebaseFirestore.getInstance().collection("users").document(userId)
 
         val venueId = _formState.value?.venues?.find { it.name == venueName }?.id
         if (venueId == null) {
-            _formState.value = _formState.value?.copy(error = "Venue not found")
+            _uiState.value = CreateEventUiState.ERROR("Venue not found")
             return
         }
+        
+        val organizerRef: DocumentReference = FirebaseFirestore.getInstance().collection("users").document(userId)
         val venueRef: DocumentReference = FirebaseFirestore.getInstance().collection("venues").document(venueId)
 
         val newEvent = Event(
@@ -112,14 +110,14 @@ class CreateEventViewModel(private val eventRepository: EventRepository) : ViewM
         viewModelScope.launch {
             val result = eventRepository.createEvent(newEvent)
             result.onSuccess {
-                _formState.value = _formState.value?.copy(isEventCreated = true, error = null)
+                _uiState.value = CreateEventUiState.SUCCESS
             }.onFailure {
-                _formState.value = _formState.value?.copy(error = "Error creating event: ${it.message}")
+                _uiState.value = CreateEventUiState.ERROR(it.message ?: "Error creating event")
             }
         }
     }
 
-    fun onEventCreationNotified() {
-        _formState.value = _formState.value?.copy(isEventCreated = false, error = null)
+    fun onDone() {
+        _uiState.value = CreateEventUiState.IDLE
     }
 }

@@ -6,6 +6,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Bundle
 import android.util.Log
+import androidx.collection.ArrayMap
 import com.example.kotlinapp.data.models.Event
 import com.example.kotlinapp.data.models.User
 import com.example.kotlinapp.data.models.Venue
@@ -13,15 +14,18 @@ import com.example.kotlinapp.data.service.EventServiceAdapter
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.analytics.ktx.analytics
 import com.google.firebase.firestore.DocumentReference
+import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -39,7 +43,27 @@ class EventRepository(private val context: Context) {
     private val eventServiceAdapter = EventServiceAdapter()
     private val analytics: FirebaseAnalytics = Firebase.analytics
     private val db: FirebaseFirestore = FirebaseFirestore.getInstance()
+
+    private val reservedEventsCache = ArrayMap<String, Event>()
     private var cachedEvents: List<Event>? = null
+    private val bookedStatusCache = ArrayMap<String, Boolean>()
+
+    private suspend fun enrichEvent(event: Event): Event {
+        return try {
+            event.venueid?.get()?.await()?.toObject(Venue::class.java)?.let {
+                venue -> event.copy(location = GeoPoint(venue.latitude, venue.longitude))
+            } ?: event
+        } catch (e: Exception) {
+            Log.e(TAG, "Error enriching event ${event.id}: ${e.message}")
+            event // Return original event on failure
+        }
+    }
+
+    private suspend fun enrichEventsWithLocation(events: List<Event>): List<Event> = coroutineScope {
+        events.map { event ->
+            async { enrichEvent(event) }
+        }.awaitAll()
+    }
 
     suspend fun getSports(): List<String> {
         val snapshot = db.collection("sport_counts").get().await()
@@ -56,78 +80,71 @@ class EventRepository(private val context: Context) {
     }
 
     suspend fun createEvent(event: Event): Result<Unit> {
+        if (!isOnline()) {
+            return Result.failure(Exception("No internet connection to create the event."))
+        }
         return try {
             db.collection("events").add(event).await()
             cachedEvents = null
             Result.success(Unit)
         } catch (e: Exception) {
-            Log.e(TAG, "Error al crear el evento: ${e.message}", e)
+            Log.e(TAG, "Error creating event: ${e.message}", e)
             Result.failure(e)
         }
     }
 
 
-    suspend fun updateEvent(eventId: String, updates: Map<String, Any>): Result<Unit> {
-        return try {
-
+    suspend fun updateEvent(eventId: String, updates: Map<String, Any>): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
             eventServiceAdapter.updateEvent(eventId, updates)
-
             cachedEvents = null
             Result.success(Unit)
         } catch (e: Exception) {
-            Log.e(TAG, "Error al actualizar evento: ${e.message}", e)
+            Log.e(TAG, "Error updating event: ${e.message}", e)
             Result.failure(e)
         }
     }
 
     suspend fun getAllEvents(): RepositoryResult<List<Event>> {
-        if (cachedEvents != null) {
-            Log.d(TAG, "Devolviendo ${cachedEvents!!.size} eventos de la caché.")
-            return if (isOnline()) RepositoryResult.Success(cachedEvents!!) else RepositoryResult.Stale(cachedEvents!!)
+        if (!isOnline()) {
+            val bookedEvents = reservedEventsCache.values.toList()
+            return RepositoryResult.Stale(bookedEvents)
         }
 
-        if (isOnline()) {
-            return try {
-                Log.d(TAG, "Caché vacía y hay conexión. Obteniendo datos de la red.")
-                val baseEvents = eventServiceAdapter.getAllEvents()
-
-                Log.d(TAG, "Enriqueciendo ${baseEvents.size} eventos con datos de ubicación.")
-                val enrichedEvents = enrichEventsWithLocation(baseEvents)
-
-                cachedEvents = enrichedEvents
-                RepositoryResult.Success(enrichedEvents)
-            } catch (e: Exception) {
-                Log.e(TAG, "Error al obtener o enriquecer eventos: ${e.message}", e)
-                RepositoryResult.Error("Error al obtener eventos: ${e.message}")
-            }
-        } else {
-            return RepositoryResult.Error("No hay conexión y la caché está vacía.")
-        }
-    }
-
-    private suspend fun enrichEventsWithLocation(events: List<Event>): List<Event> = coroutineScope {
-        events.map { event ->
-            async {
-                event.venueid?.get()?.await()?.toObject(Venue::class.java)?.let { venue ->
-                    event.location = GeoPoint(venue.latitude, venue.longitude)
+        return try {
+            val baseEvents = eventServiceAdapter.getAllEvents()
+            val enrichedEvents = enrichEventsWithLocation(baseEvents)
+            cachedEvents = enrichedEvents
+            enrichedEvents.forEach {
+                if (reservedEventsCache.containsKey(it.id)) {
+                    reservedEventsCache[it.id] = it
                 }
-                event
             }
-        }.awaitAll()
+            RepositoryResult.Success(enrichedEvents)
+        } catch (e: Exception) {
+            cachedEvents?.let {
+                return RepositoryResult.Stale(it)
+            }
+            return RepositoryResult.Error("Error fetching events and no cache available: ${e.message}")
+
+    private suspend fun enrichEventsWithLocation(events: List<Event>): List<Event> = withContext(Dispatchers.IO) {
+        coroutineScope {
+            events.map { event ->
+                async { // Corrutina Hija
+                    event.venueid?.get()?.await()?.toObject(Venue::class.java)?.let { venue ->
+                        event.location = GeoPoint(venue.latitude, venue.longitude)
+                    }
+                    event
+                }
+            }.awaitAll() // Espera a todas las hijas
+        }
     }
 
     suspend fun getNearbyEvents(userLocation: GeoPoint, radiusInMeters: Double): RepositoryResult<List<Event>> {
         val allEventsResult = getAllEvents()
-
         return when (allEventsResult) {
-            is RepositoryResult.Success -> {
-                val nearby = filterNearby(allEventsResult.data, userLocation, radiusInMeters)
-                RepositoryResult.Success(nearby)
-            }
-            is RepositoryResult.Stale -> {
-                val nearby = filterNearby(allEventsResult.data, userLocation, radiusInMeters)
-                RepositoryResult.Stale(nearby)
-            }
+            is RepositoryResult.Success -> RepositoryResult.Success(filterNearby(allEventsResult.data, userLocation, radiusInMeters))
+            is RepositoryResult.Stale -> RepositoryResult.Stale(filterNearby(allEventsResult.data, userLocation, radiusInMeters))
             is RepositoryResult.Error -> allEventsResult
         }
     }
@@ -142,13 +159,10 @@ class EventRepository(private val context: Context) {
         }
     }
 
-    private fun isOnline(): Boolean {
-        val connectivityManager =
-            context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-
+    fun isOnline(): Boolean {
+        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val network = connectivityManager.activeNetwork ?: return false
         val activeNetwork = connectivityManager.getNetworkCapabilities(network) ?: return false
-
         return when {
             activeNetwork.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> true
             activeNetwork.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> true
@@ -158,91 +172,148 @@ class EventRepository(private val context: Context) {
     }
 
     suspend fun getRecommendedEvents(user: User, limit: Long = 4L): Result<List<Event>> {
+        if (!isOnline()) return Result.failure(Exception("No connection to get recommendations."))
         return try {
-            val events = eventServiceAdapter.getRecommendedEvents(user, limit)
-            Result.success(events)
+            Result.success(eventServiceAdapter.getRecommendedEvents(user, limit))
         } catch (e: Exception) {
-            Log.e(TAG, "Fallo al obtener eventos recomendados: ${e.message}", e)
             Result.failure(e)
         }
     }
 
-    suspend fun getPostedEvents(userId: String): Result<List<Event>> {
-        return try {
+
+    suspend fun getPostedEvents(userId: String): Result<List<Event>> = withContext(Dispatchers.IO) {
+        try {
             val events = eventServiceAdapter.getEventsByOrganizer(userId)
             Result.success(events)
         } catch (e: Exception) {
-            Log.e(TAG, "Error al obtener eventos publicados: ${e.message}", e)
+            Log.e(TAG, "Error fetching posted events: ${e.message}", e)
             Result.failure(e)
         }
     }
 
     suspend fun getEventById(eventId: String): Result<Event> {
+        reservedEventsCache[eventId]?.let { return Result.success(it) }
+        cachedEvents?.find { it.id == eventId }?.let { return Result.success(it) }
+
+        if (!isOnline()) {
+            return Result.failure(Exception("Offline and event not found in cache."))
+        }
+
         return try {
             val snapshot = db.collection("events").document(eventId).get().await()
             val event = snapshot.toObject(Event::class.java)
-            if (event != null) Result.success(event)
-            else Result.failure(Exception("Evento no encontrado"))
+            if (event != null) {
+                val enrichedEvent = enrichEvent(event)
+                Result.success(enrichedEvent)
+            } else {
+                Result.failure(Exception("Event not found"))
+            }
         } catch (e: Exception) {
             Result.failure(e)
         }
-    }
-
-    fun isDeviceOnline(): Boolean {
-        return isOnline()
     }
 
     suspend fun createBooking(eventId: String, userId: String): Result<Unit> {
+        if (!isOnline()) {
+            return Result.failure(Exception("No internet connection to make a reservation."))
+        }
         return try {
             val eventRef = db.collection("events").document(eventId)
             val userRef = db.collection("users").document(userId)
+            if (hasBooking(eventId, userId).getOrDefault(false)) {
+                 return Result.failure(Exception("You have already booked this event."))
+            }
+            analytics.logEvent("booking_completed", Bundle().apply { putString(FirebaseAnalytics.Param.ITEM_ID, eventId); putString("user_id", userId) })
+            db.runTransaction { transaction ->
+                val newBookingRef = db.collection("booked").document()
+                transaction.set(newBookingRef, mapOf("eventId" to eventRef, "userId" to userRef, "timestamp" to FieldValue.serverTimestamp()))
+                val yyyyMM = SimpleDateFormat("yyyyMM", Locale.getDefault()).format(Date())
+                val monthlyUniqueUserRef = db.collection("monthly_unique_bookers").document(yyyyMM).collection("users").document(userId)
+                transaction.set(monthlyUniqueUserRef, mapOf("first_booking_at" to FieldValue.serverTimestamp()), SetOptions.merge())
+                transaction.update(eventRef, "booked", FieldValue.increment(1))
+                null
+            }.await()
+            val freshEvent = db.collection("events").document(eventId).get().await().toObject(Event::class.java)
+            if (freshEvent != null) {
+                val enrichedEvent = enrichEvent(freshEvent)
+                reservedEventsCache[eventId] = enrichedEvent
+                bookedStatusCache[eventId] = true
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error creating booking: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
 
-            val alreadyBookedQuery = db.collection("booked")
+    suspend fun hasBooking(eventId: String, userId: String): Result<Boolean> {
+        if (bookedStatusCache.containsKey(eventId)) {
+            return Result.success(bookedStatusCache[eventId]!!)
+        }
+        if (!isOnline()) {
+            return Result.failure(Exception("No internet connection to check booking status."))
+        }
+        return try {
+            val eventRef = db.collection("events").document(eventId)
+            val userRef = db.collection("users").document(userId)
+            val bookingQuery = db.collection("booked")
                 .whereEqualTo("eventId", eventRef)
                 .whereEqualTo("userId", userRef)
                 .limit(1)
-                .get().await()
-
-            if (!alreadyBookedQuery.isEmpty) {
-                return Result.failure(Exception("Ya has reservado este evento."))
-            }
-
-            analytics.logEvent("booking_completed", Bundle().apply {
-                putString(FirebaseAnalytics.Param.ITEM_ID, eventId)
-                putString("user_id", userId)
-            })
-
-            db.runTransaction { transaction ->
-                val newBookingRef = db.collection("booked").document()
-                val bookingData = mapOf(
-                    "eventId" to eventRef,
-                    "userId" to userRef,
-                    "timestamp" to FieldValue.serverTimestamp()
-                )
-                transaction.set(newBookingRef, bookingData)
-
-                val yyyyMM = SimpleDateFormat("yyyyMM", Locale.getDefault()).format(Date())
-                val monthlyUniqueUserRef = db.collection("monthly_unique_bookers")
-                    .document(yyyyMM)
-                    .collection("users")
-                    .document(userId)
-
-                val firstBookingMark = mapOf(
-                    "first_booking_at" to FieldValue.serverTimestamp()
-                )
-                transaction.set(monthlyUniqueUserRef, firstBookingMark, SetOptions.merge())
-
-                transaction.update(eventRef, "booked", FieldValue.increment(1))
-
-                null
-            }.await()
-
-            Result.success(Unit)
-
+                .get()
+                .await()
+            val hasBooking = !bookingQuery.isEmpty
+            bookedStatusCache[eventId] = hasBooking
+            Result.success(hasBooking)
         } catch (e: Exception) {
-            Log.e(TAG, "Error al crear la reserva: ${e.message}", e)
+            Log.e(TAG, "Error checking for existing booking: ${e.message}", e)
             Result.failure(e)
         }
+    }
+
+    suspend fun populateUserBookings(userId: String) {
+        if (!isOnline()) {
+            Log.d(TAG, "Offline, cannot populate booking cache from network.")
+            return
+        }
+        try {
+            val userRef = db.collection("users").document(userId)
+            val snapshot = db.collection("booked").whereEqualTo("userId", userRef).get().await()
+
+            val eventRefs = snapshot.documents.mapNotNull { it.getDocumentReference("eventId") }
+
+            if (eventRefs.isEmpty()) {
+                Log.d(TAG, "User has no booked events to cache.")
+                clearBookingCache()
+                return
+            }
+
+            val eventSnapshots = db.collection("events").whereIn(FieldPath.documentId(), eventRefs.map { it.id }).get().await()
+            val fetchedEvents = eventSnapshots.toObjects(Event::class.java)
+            val enrichedEvents = enrichEventsWithLocation(fetchedEvents)
+
+            val newReservedCache = ArrayMap<String, Event>()
+            val newBookedStatusCache = ArrayMap<String, Boolean>()
+            enrichedEvents.forEach { event ->
+                newReservedCache[event.id] = event
+                newBookedStatusCache[event.id] = true
+            }
+            reservedEventsCache.clear()
+            reservedEventsCache.putAll(newReservedCache as Map<String, Event>)
+            bookedStatusCache.clear()
+            bookedStatusCache.putAll(newBookedStatusCache as Map<String, Boolean>)
+
+            Log.d(TAG, "Booking and Reserved Event caches populated with ${reservedEventsCache.size} events.")
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error populating booking cache: ${e.message}", e)
+        }
+    }
+
+    fun clearBookingCache() {
+        bookedStatusCache.clear()
+        reservedEventsCache.clear()
+        Log.d(TAG, "Booking and reserved event caches cleared.")
     }
 
     suspend fun getVenueByReference(venueRef: DocumentReference): Result<Venue?> {
@@ -256,11 +327,13 @@ class EventRepository(private val context: Context) {
         }
     }
 
-
     suspend fun cancelBooking(eventId: String, userId: String): Result<Unit> {
-        return try {        val eventRef = db.collection("events").document(eventId)
+        if (!isOnline()) {
+            return Result.failure(Exception("No internet connection to cancel booking."))
+        }
+        return try {
+            val eventRef = db.collection("events").document(eventId)
             val userRef = db.collection("users").document(userId)
-
 
             val bookingQuery = db.collection("booked")
                 .whereEqualTo("eventId", eventRef)
@@ -270,27 +343,24 @@ class EventRepository(private val context: Context) {
                 .await()
 
             if (bookingQuery.isEmpty) {
-
-                return Result.failure(Exception("No se encontró una reserva para este evento."))
+                bookedStatusCache[eventId] = false
+                return Result.failure(Exception("Booking not found for this event."))
             }
 
             val bookingDocToDelete = bookingQuery.documents.first()
 
-
             db.runTransaction { transaction ->
-
                 transaction.update(eventRef, "booked", FieldValue.increment(-1))
-
-
                 transaction.delete(bookingDocToDelete.reference)
-
                 null
             }.await()
+            bookedStatusCache.remove(eventId)
+            reservedEventsCache.remove(eventId)
 
             Result.success(Unit)
         } catch (e: Exception) {
-            Log.e(TAG, "Error al cancelar la reserva: ${e.message}", e)
-            Result.failure(Exception("Error al cancelar la reserva: ${e.message}"))
+            Log.e(TAG, "Error cancelling booking: ${e.message}", e)
+            Result.failure(Exception("Error cancelling booking: ${e.message}"))
         }
     }
 }

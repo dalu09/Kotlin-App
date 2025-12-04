@@ -109,13 +109,13 @@ class MainFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         toggleButton.setOnClickListener {
             isShowingNearby = !isShowingNearby
             if (isShowingNearby) {
-                toggleButton.text = "Eventos Cercanos"
+                toggleButton.text = "Ver Todos"
                 toggleButton.setIconResource(R.drawable.ic_location_nearby)
                 lastKnownLocation?.let {
                     viewModel.loadNearbyEvents(it, 10000.0)
                 } ?: enableMyLocation()
             } else {
-                toggleButton.text = "Ver Todos"
+                toggleButton.text = "Eventos Cercanos"
                 toggleButton.setIconResource(R.drawable.ic_view_grid)
                 viewModel.loadAllEvents()
             }
