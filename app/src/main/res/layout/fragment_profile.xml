@@ -11,6 +11,7 @@
         android:layout_height="wrap_content"
         android:padding="16dp">
 
+        <!-- User Info Block -->
         <ImageView
             android:id="@+id/back_arrow"
             android:layout_width="wrap_content"
@@ -98,6 +99,49 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/profile_bio" />
 
+        <!-- Network Error Block - CORREGIDO -->
+        <LinearLayout
+            android:id="@+id/network_error_layout"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="16dp"
+            android:layout_marginTop="36dp"
+            android:visibility="gone"
+            tools:visibility="visible"
+            app:layout_constraintTop_toBottomOf="@+id/edit_profile_button"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <ImageView
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                app:tint="?android:attr/textColorSecondary" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Connection Error"
+                android:textAppearance="?attr/textAppearanceHeadline6" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Could not load events. Please check your connection."
+                android:gravity="center"
+                android:textAppearance="?attr/textAppearanceBody2" />
+
+            <Button
+                android:id="@+id/retry_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Retry" />
+        </LinearLayout>
+
+        <!-- Events Lists Block -->
         <TextView
             android:id="@+id/upcoming_events_title"
             android:layout_width="wrap_content"
@@ -143,6 +187,7 @@
             app:layout_constraintTop_toBottomOf="@id/posted_events_title">
         </LinearLayout>
 
+        <!-- Sign Out Button -->
         <Button
             android:id="@+id/btnSignOut"
             android:layout_width="0dp"
@@ -153,5 +198,7 @@
             android:textColor="@android:color/white"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/posted_events_container" /> </androidx.constraintlayout.widget.ConstraintLayout>
+            app:layout_constraintTop_toBottomOf="@id/posted_events_container" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.core.widget.NestedScrollView>
