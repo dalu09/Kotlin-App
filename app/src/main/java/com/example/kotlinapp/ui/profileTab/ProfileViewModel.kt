@@ -75,40 +75,53 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     fun loadUserEvents() {
         val userId = authRepository.currentUserId() ?: return
 
-        eventsCache.get("posted_events")?.let { cachedPosted ->
+        val cachedPosted = eventsCache.get("posted_events") as? List<Event>
+        val cachedUpcoming = eventsCache.get("upcoming_events") as? List<Event>
+
+        if (cachedPosted != null) {
             _postedEvents.value = cachedPosted
         }
-        eventsCache.get("upcoming_events")?.let { cachedUpcoming ->
+        if (cachedUpcoming != null) {
             _upcomingEvents.value = cachedUpcoming
         }
 
+
+        val hasContentFromCache = (cachedPosted?.isNotEmpty() == true) || (cachedUpcoming?.isNotEmpty() == true)
+
         viewModelScope.launch {
-            try {
-                val upcomingEventsFromNetwork = serviceAdapter.getUpcomingBookedEvents(userId)
-                val postedEventsFromNetwork = eventRepository.getPostedEvents(userId).getOrThrow()
 
-                _upcomingEvents.postValue(upcomingEventsFromNetwork)
-                _postedEvents.postValue(postedEventsFromNetwork)
+            val upcomingResult = runCatching { serviceAdapter.getUpcomingBookedEvents(userId) }
+            val postedResult = runCatching { eventRepository.getPostedEvents(userId).getOrThrow() }
 
-                eventsCache.put("posted_events", postedEventsFromNetwork)
-                eventsCache.put("upcoming_events", upcomingEventsFromNetwork)
+            // 4. Si la primera llamada (upcoming) fue exitosa, actualizamos todo.
+            upcomingResult.onSuccess { networkEvents ->
+                _upcomingEvents.postValue(networkEvents)
+                eventsCache.put("upcoming_events", networkEvents)
+            }
 
-                // Si todo fue bien, el error de red está oculto
-                _networkError.postValue(false)
+            // 5. Si la segunda llamada (posted) fue exitosa, actualizamos todo.
+            postedResult.onSuccess { networkEvents ->
+                _postedEvents.postValue(networkEvents)
+                eventsCache.put("posted_events", networkEvents)
+            }
 
-            } catch (e: Exception) {
-                val wasPostedCacheEmpty = eventsCache.get("posted_events") == null
-                val wasUpcomingCacheEmpty = eventsCache.get("upcoming_events") == null
-
-                if (wasPostedCacheEmpty && wasUpcomingCacheEmpty) {
+            if (upcomingResult.isFailure && postedResult.isFailure) {
+                if (!hasContentFromCache) {
                     _networkError.postValue(true)
                 }
+
+
+            } else {
+                _networkError.postValue(false)
             }
         }
     }
 
+
+
     fun onRetry() {
         _networkError.value = false
+        startListeningForUserProfile()
         loadUserEvents()
     }
 
@@ -122,6 +135,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun onSignOutClicked() {
+        eventsCache.evictAll()
         authRepository.signOut()
         _navigateToLogin.value = true
     }

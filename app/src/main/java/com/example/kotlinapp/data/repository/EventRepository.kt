@@ -177,6 +177,9 @@ class EventRepository(private val context: Context) {
 
 
     suspend fun getPostedEvents(userId: String): Result<List<Event>> = withContext(Dispatchers.IO) {
+        if (!isOnline()) {
+            return@withContext Result.failure(Exception("No internet connection to fetch posted events."))
+        }
         try {
             val events = eventServiceAdapter.getEventsByOrganizer(userId)
             Result.success(events)

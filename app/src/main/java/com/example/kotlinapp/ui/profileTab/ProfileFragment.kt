@@ -13,7 +13,7 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.kotlinapp.R
-import com.example.kotlinapp.databinding.FragmentProfileBinding // 1. Importar View Binding
+import com.example.kotlinapp.databinding.FragmentProfileBinding
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 
