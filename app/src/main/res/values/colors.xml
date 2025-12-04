@@ -1,14 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
-    <color name="principal">#FFFCF9</color>
-    <color name="acento">#31B179</color>
-    <color name="texto">#202020</color>
-    <color name="acento_2">#EF2875</color>
-    <color name="gris">#9BA19E</color>
-
-    <color name="principal_oscuro">#1A1C1A</color>
-
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#FF6200EE</color>
     <color name="purple_700">#FF3700B3</color>
@@ -16,8 +7,21 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="off_white">#FFFAF7</color>
-    <color name="green">#2E7D32</color>
-    <color name="salmon">#F08080</color>
+    <color name="green_light">#FF81C784</color>
 
+    <!-- Colores de la app -->
+    <color name="principal">#00796B</color> <!-- Teal más oscuro -->
+    <color name="principal_oscuro">#004D40</color> <!-- Teal muy oscuro -->
+    <color name="acento">#FFC107</color> <!-- Amber -->
+    <color name="acento_2">#FF8F00</color> <!-- Amber más oscuro -->
+    <color name="texto">#212121</color>
+    <color name="gris">#BDBDBD</color>
+
+    <!-- Colores funcionales -->
+    <color name="colorWarning">#FFC107</color>
+
+    <!-- Colores añadidos para arreglar errores de compilación -->
+    <color name="green">#4CAF50</color>
+    <color name="salmon">#FA8072</color>
+    <color name="off_white">#F8F8F8</color>
 </resources>
