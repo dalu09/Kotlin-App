@@ -4,6 +4,7 @@ import com.example.kotlinapp.data.models.Event
 import com.example.kotlinapp.data.models.User
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Source
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -34,13 +35,14 @@ class ProfileServiceAdapter {
         awaitClose { listenerRegistration.remove() }
     }
 
+
     suspend fun getUpcomingBookedEvents(userId: String): List<Event> {
-        return try {
+        try {
             val userRef = db.collection("users").document(userId)
 
             val bookingsSnapshot = db.collection("booked")
                 .whereEqualTo("userId", userRef)
-                .get()
+                .get(Source.SERVER)
                 .await()
 
             val eventReferences = bookingsSnapshot.documents.mapNotNull { doc ->
@@ -53,16 +55,16 @@ class ProfileServiceAdapter {
 
             val eventsSnapshot = db.collection("events")
                 .whereIn(com.google.firebase.firestore.FieldPath.documentId(), eventReferences)
-                .get()
+                .get(Source.SERVER)
                 .await()
 
             val now = Date()
-            eventsSnapshot.toObjects(Event::class.java).filter { event ->
+            return eventsSnapshot.toObjects(Event::class.java).filter { event ->
                 event.start_time != null && event.start_time.after(now)
             }
         } catch (e: Exception) {
-            android.util.Log.e("ProfileService", "Error fetching upcoming events: ${e.message}", e)
-            emptyList()
+
+            throw e
         }
     }
 

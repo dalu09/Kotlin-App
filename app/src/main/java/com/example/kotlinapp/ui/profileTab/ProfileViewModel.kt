@@ -2,6 +2,7 @@ package com.example.kotlinapp.ui.profileTab
 
 import android.app.Application
 import android.graphics.Bitmap
+import androidx.collection.LruCache
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -9,7 +10,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.kotlinapp.data.models.Event
 import com.example.kotlinapp.data.models.User
 import com.example.kotlinapp.data.repository.AuthRepository
-import com.example.kotlinapp.data.repository.EventRepository // AÑADIDO
+import com.example.kotlinapp.data.repository.EventRepository
 import com.example.kotlinapp.data.service.ProfileServiceAdapter
 import com.example.kotlinapp.utils.FileStorageManager
 import kotlinx.coroutines.Dispatchers
@@ -21,7 +22,6 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
 
     private val serviceAdapter = ProfileServiceAdapter()
     private val authRepository = AuthRepository()
-    // AÑADIDO: Instancia del repositorio de eventos
     private val eventRepository = EventRepository(application)
 
     private val _user = MutableLiveData<User?>()
@@ -39,9 +39,13 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     private val _upcomingEvents = MutableLiveData<List<Event>>()
     val upcomingEvents: LiveData<List<Event>> = _upcomingEvents
 
-    // AÑADIDO: LiveData para los eventos publicados por el usuario
     private val _postedEvents = MutableLiveData<List<Event>>()
     val postedEvents: LiveData<List<Event>> = _postedEvents
+
+    private val eventsCache = LruCache<String, List<Event>>(4)
+
+    private val _networkError = MutableLiveData<Boolean>(false)
+    val networkError: LiveData<Boolean> = _networkError
 
     init {
         startListeningForUserProfile()
@@ -49,17 +53,12 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
 
     private fun startListeningForUserProfile() {
         val currentUserId = authRepository.currentUserId()
-
         if (currentUserId == null) {
             _error.value = "No se encontró un usuario autenticado."
             return
         }
 
         loadProfileImage(currentUserId)
-        loadUpcomingEvents(currentUserId)
-
-        // AÑADIDO: Cargar los eventos creados por el usuario
-        loadPostedEvents(currentUserId)
 
         viewModelScope.launch {
             serviceAdapter.getUserProfileFlow(currentUserId)
@@ -73,39 +72,52 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    fun loadUserEvents() {
+        val userId = authRepository.currentUserId() ?: return
+
+        eventsCache.get("posted_events")?.let { cachedPosted ->
+            _postedEvents.value = cachedPosted
+        }
+        eventsCache.get("upcoming_events")?.let { cachedUpcoming ->
+            _upcomingEvents.value = cachedUpcoming
+        }
+
+        viewModelScope.launch {
+            try {
+                val upcomingEventsFromNetwork = serviceAdapter.getUpcomingBookedEvents(userId)
+                val postedEventsFromNetwork = eventRepository.getPostedEvents(userId).getOrThrow()
+
+                _upcomingEvents.postValue(upcomingEventsFromNetwork)
+                _postedEvents.postValue(postedEventsFromNetwork)
+
+                eventsCache.put("posted_events", postedEventsFromNetwork)
+                eventsCache.put("upcoming_events", upcomingEventsFromNetwork)
+
+                // Si todo fue bien, el error de red está oculto
+                _networkError.postValue(false)
+
+            } catch (e: Exception) {
+                val wasPostedCacheEmpty = eventsCache.get("posted_events") == null
+                val wasUpcomingCacheEmpty = eventsCache.get("upcoming_events") == null
+
+                if (wasPostedCacheEmpty && wasUpcomingCacheEmpty) {
+                    _networkError.postValue(true)
+                }
+            }
+        }
+    }
+
+    fun onRetry() {
+        _networkError.value = false
+        loadUserEvents()
+    }
+
     private fun loadProfileImage(userId: String) {
         viewModelScope.launch {
             val bitmap = withContext(Dispatchers.IO) {
                 FileStorageManager.loadProfileImage(getApplication(), userId)
             }
             _profileImage.value = bitmap
-        }
-    }
-
-    private fun loadUpcomingEvents(userId: String) {
-        viewModelScope.launch {
-            // Nota: Asumo que getUpcomingBookedEvents maneja sus propios errores o retorna lista vacía
-            try {
-                val events = withContext(Dispatchers.IO) {
-                    serviceAdapter.getUpcomingBookedEvents(userId)
-                }
-                _upcomingEvents.postValue(events)
-            } catch (e: Exception) {
-                // Opcional: manejar error de upcoming events
-            }
-        }
-    }
-
-    // AÑADIDO: Función para cargar eventos publicados desde el repositorio
-    private fun loadPostedEvents(userId: String) {
-        viewModelScope.launch {
-            val result = eventRepository.getPostedEvents(userId)
-
-            result.onSuccess { events ->
-                _postedEvents.value = events
-            }.onFailure { e ->
-                _error.value = "Error al cargar eventos publicados: ${e.message}"
-            }
         }
     }
 

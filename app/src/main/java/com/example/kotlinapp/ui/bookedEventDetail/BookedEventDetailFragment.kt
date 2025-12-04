@@ -98,7 +98,6 @@ class BookedEventDetailFragment : Fragment() {
         }
     }
 
-    // 6. Limpiar la referencia en onDestroyView para evitar fugas de memoria
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
