@@ -20,10 +20,12 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -91,8 +93,9 @@ class EventRepository(private val context: Context) {
         }
     }
 
-    suspend fun updateEvent(eventId: String, updates: Map<String, Any>): Result<Unit> {
-        return try {
+
+    suspend fun updateEvent(eventId: String, updates: Map<String, Any>): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
             eventServiceAdapter.updateEvent(eventId, updates)
             cachedEvents = null
             Result.success(Unit)
@@ -123,6 +126,17 @@ class EventRepository(private val context: Context) {
                 return RepositoryResult.Stale(it)
             }
             return RepositoryResult.Error("Error fetching events and no cache available: ${e.message}")
+
+    private suspend fun enrichEventsWithLocation(events: List<Event>): List<Event> = withContext(Dispatchers.IO) {
+        coroutineScope {
+            events.map { event ->
+                async { // Corrutina Hija
+                    event.venueid?.get()?.await()?.toObject(Venue::class.java)?.let { venue ->
+                        event.location = GeoPoint(venue.latitude, venue.longitude)
+                    }
+                    event
+                }
+            }.awaitAll() // Espera a todas las hijas
         }
     }
 
@@ -166,8 +180,9 @@ class EventRepository(private val context: Context) {
         }
     }
 
-    suspend fun getPostedEvents(userId: String): Result<List<Event>> {
-        return try {
+
+    suspend fun getPostedEvents(userId: String): Result<List<Event>> = withContext(Dispatchers.IO) {
+        try {
             val events = eventServiceAdapter.getEventsByOrganizer(userId)
             Result.success(events)
         } catch (e: Exception) {
