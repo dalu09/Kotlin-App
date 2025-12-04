@@ -62,7 +62,9 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
 
         viewModelScope.launch {
             serviceAdapter.getUserProfileFlow(currentUserId)
-                .catch { exception -> _error.value = "Error al obtener perfil: ${exception.message}" }
+                .catch { exception ->
+                    _error.value = "Error al obtener perfil: ${exception.message}"
+                }
                 .collect { userFromFlow ->
                     _user.value = userFromFlow
                     _error.value = null
@@ -76,16 +78,12 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         eventsCache.get("posted_events")?.let { cachedPosted ->
             _postedEvents.value = cachedPosted
         }
-
         eventsCache.get("upcoming_events")?.let { cachedUpcoming ->
             _upcomingEvents.value = cachedUpcoming
         }
 
         viewModelScope.launch {
             try {
-                val wasPostedCacheEmpty = eventsCache.get("posted_events") == null
-                val wasUpcomingCacheEmpty = eventsCache.get("upcoming_events") == null
-
                 val upcomingEventsFromNetwork = serviceAdapter.getUpcomingBookedEvents(userId)
                 val postedEventsFromNetwork = eventRepository.getPostedEvents(userId).getOrThrow()
 
@@ -95,6 +93,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                 eventsCache.put("posted_events", postedEventsFromNetwork)
                 eventsCache.put("upcoming_events", upcomingEventsFromNetwork)
 
+                // Si todo fue bien, el error de red está oculto
                 _networkError.postValue(false)
 
             } catch (e: Exception) {

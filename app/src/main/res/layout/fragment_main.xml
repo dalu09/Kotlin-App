@@ -16,7 +16,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Botón movido a la esquina inferior izquierda y hecho más compacto -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/toggleEventsButton"
         style="@style/Widget.MaterialComponents.Button.Icon"
