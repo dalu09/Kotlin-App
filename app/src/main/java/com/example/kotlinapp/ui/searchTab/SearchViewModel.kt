@@ -52,7 +52,7 @@ class SearchViewModel(private val eventRepository: EventRepository) : ViewModel(
 
             try {
                 val recommendedJob = async(Dispatchers.IO) {
-                    // Este bloque se ejecuta en un hilo de background (Pool de IO).
+                    // Este bloque se ejecuta en un hilo de background (Pool de IO)
                     val userId = profileAdapter.getCurrentUserId()
                     if (userId != null) {
                         val user = profileAdapter.getUserProfileFlow(userId).first()
