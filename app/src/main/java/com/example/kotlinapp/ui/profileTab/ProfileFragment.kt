@@ -21,7 +21,6 @@ class ProfileFragment : Fragment() {
 
     private val viewModel: ProfileViewModel by viewModels()
 
-    // 2. Declarar la variable de binding
     private var _binding: FragmentProfileBinding? = null
     private val binding get() = _binding!!
 
@@ -31,7 +30,6 @@ class ProfileFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        // 3. Inflar el layout usando View Binding
         _binding = FragmentProfileBinding.inflate(inflater, container, false)
         return binding.root
     }
@@ -39,12 +37,13 @@ class ProfileFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Ya no necesitamos 'findViewById' aquí
         setupRecyclerView()
         setupClickListeners()
         setupObservers()
+    }
 
-        // 4. Llamar a la función para cargar eventos desde el ViewModel
+    override fun onResume() {
+        super.onResume()
         viewModel.loadUserEvents()
     }
 
@@ -61,7 +60,6 @@ class ProfileFragment : Fragment() {
         binding.editProfileButton.setOnClickListener {
             findNavController().navigate(R.id.action_profileFragment_to_editProfileFragment)
         }
-        // 5. Añadir el listener para el botón de reintentar
         binding.retryButton.setOnClickListener {
             viewModel.onRetry()
         }
@@ -72,7 +70,6 @@ class ProfileFragment : Fragment() {
     }
 
     private fun setupObservers() {
-        // La vista raíz 'rootView' ya no es necesaria como parámetro
 
         viewModel.user.observe(viewLifecycleOwner) { user ->
             if (user != null) {
@@ -142,13 +139,8 @@ class ProfileFragment : Fragment() {
             }
         }
 
-        // 6. Observador para el estado de la red
         viewModel.networkError.observe(viewLifecycleOwner) { hasError ->
-            // Muestra el layout de error si 'hasError' es true
             binding.networkErrorLayout.isVisible = hasError
-
-            // Oculta las listas de eventos si hay un error
-            // (los títulos y los RecyclerViews)
             binding.upcomingEventsTitle.isVisible = !hasError
             binding.upcomingEventsRecyclerView.isVisible = !hasError
             binding.postedEventsTitle.isVisible = !hasError
@@ -159,8 +151,6 @@ class ProfileFragment : Fragment() {
     private fun updateRatingUI(ratingTextView: TextView, avg: Double, count: Long) {
         ratingTextView.text = if (count > 0) "★ %.1f (%d)".format(avg, count) else "Sin calificaciones"
     }
-
-
 
     private fun updateSportsChips(sports: List<String>, sportTagsGroup: ChipGroup) {
         sportTagsGroup.removeAllViews()
@@ -173,7 +163,6 @@ class ProfileFragment : Fragment() {
         }
     }
 
-    // 7. Limpiar la referencia al binding para evitar fugas de memoria
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

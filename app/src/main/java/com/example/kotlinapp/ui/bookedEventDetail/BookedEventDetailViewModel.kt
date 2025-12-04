@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.kotlinapp.data.models.Event
+import com.example.kotlinapp.data.models.Venue
 import com.example.kotlinapp.data.repository.EventRepository
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
@@ -31,32 +32,30 @@ class BookedEventDetailViewModel(private val repo: EventRepository) : ViewModel(
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
 
+    private val _networkError = MutableLiveData<Boolean>(false)
+    val networkError: LiveData<Boolean> = _networkError
 
     private val _cancellationSuccess = MutableLiveData<Boolean>()
     val cancellationSuccess: LiveData<Boolean> = _cancellationSuccess
 
     fun loadEventAndVenue(eventId: String) {
-        _isLoading.value = true
         viewModelScope.launch {
+            _isLoading.value = true
+            _networkError.value = false
+
             val eventResult = repo.getEventById(eventId)
-            if (eventResult.isFailure) {
-                _error.value = "Error al cargar el evento."
+
+            eventResult.onSuccess { event ->
+
+                val venueResult = event.venueid?.let { repo.getVenueByReference(it) }
+                _eventDetails.value = BookedEventDetails(event, venueResult?.getOrNull())
                 _isLoading.value = false
-                return@launch
-            }
+            }.onFailure {
 
-            val event = eventResult.getOrNull()
-            if (event?.venueid == null) {
-                _eventDetails.value = BookedEventDetails(event!!, null)
                 _isLoading.value = false
-                return@launch
+                _networkError.value = true
+                _eventDetails.value = null
             }
-
-            val venueResult = repo.getVenueByReference(event.venueid)
-            val venue = venueResult.getOrNull()
-
-            _eventDetails.value = BookedEventDetails(event, venue)
-            _isLoading.value = false
         }
     }
 
@@ -71,13 +70,18 @@ class BookedEventDetailViewModel(private val repo: EventRepository) : ViewModel(
         viewModelScope.launch {
             repo.cancelBooking(eventId, userId)
                 .onSuccess {
+                    _isLoading.value = false
                     _cancellationSuccess.value = true
                 }
                 .onFailure { e ->
+                    _isLoading.value = false
                     _error.value = e.message ?: "No se pudo cancelar la reserva."
                 }
-            _isLoading.value = false
         }
+    }
+
+    fun onRetry(eventId: String) {
+        loadEventAndVenue(eventId)
     }
 
     fun onErrorShown() {
