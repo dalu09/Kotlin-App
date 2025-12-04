@@ -51,18 +51,23 @@ class EventRepository(private val context: Context) {
     private suspend fun enrichEvent(event: Event): Event {
         return try {
             event.venueid?.get()?.await()?.toObject(Venue::class.java)?.let {
-                venue -> event.copy(location = GeoPoint(venue.latitude, venue.longitude))
+                    venue -> event.copy(location = GeoPoint(venue.latitude, venue.longitude))
             } ?: event
         } catch (e: Exception) {
             Log.e(TAG, "Error enriching event ${event.id}: ${e.message}")
-            event // Return original event on failure
+            event
         }
     }
 
-    private suspend fun enrichEventsWithLocation(events: List<Event>): List<Event> = coroutineScope {
-        events.map { event ->
-            async { enrichEvent(event) }
-        }.awaitAll()
+
+    private suspend fun enrichEventsWithLocation(events: List<Event>): List<Event> = withContext(Dispatchers.IO) {
+        coroutineScope {
+            events.map { event ->
+                async {
+                    enrichEvent(event)
+                }
+            }.awaitAll()
+        }
     }
 
     suspend fun getSports(): List<String> {
@@ -113,6 +118,7 @@ class EventRepository(private val context: Context) {
 
         return try {
             val baseEvents = eventServiceAdapter.getAllEvents()
+
             val enrichedEvents = enrichEventsWithLocation(baseEvents)
             cachedEvents = enrichedEvents
             enrichedEvents.forEach {
@@ -125,18 +131,7 @@ class EventRepository(private val context: Context) {
             cachedEvents?.let {
                 return RepositoryResult.Stale(it)
             }
-            return RepositoryResult.Error("Error fetching events and no cache available: ${e.message}")
-
-    private suspend fun enrichEventsWithLocation(events: List<Event>): List<Event> = withContext(Dispatchers.IO) {
-        coroutineScope {
-            events.map { event ->
-                async { // Corrutina Hija
-                    event.venueid?.get()?.await()?.toObject(Venue::class.java)?.let { venue ->
-                        event.location = GeoPoint(venue.latitude, venue.longitude)
-                    }
-                    event
-                }
-            }.awaitAll() // Espera a todas las hijas
+            RepositoryResult.Error("Error fetching events and no cache available: ${e.message}")
         }
     }
 
@@ -221,7 +216,7 @@ class EventRepository(private val context: Context) {
             val eventRef = db.collection("events").document(eventId)
             val userRef = db.collection("users").document(userId)
             if (hasBooking(eventId, userId).getOrDefault(false)) {
-                 return Result.failure(Exception("You have already booked this event."))
+                return Result.failure(Exception("You have already booked this event."))
             }
             analytics.logEvent("booking_completed", Bundle().apply { putString(FirebaseAnalytics.Param.ITEM_ID, eventId); putString("user_id", userId) })
             db.runTransaction { transaction ->
