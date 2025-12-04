@@ -38,45 +38,57 @@ class BookedEventDetailFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
         val eventId = args.eventId
 
         setupClickListeners(eventId)
         setupObservers()
-
         viewModel.loadEventAndVenue(eventId)
     }
 
     private fun setupClickListeners(eventId: String) {
+
         binding.backArrowIcon.setOnClickListener {
+            findNavController().popBackStack()
+        }
+
+        binding.backArrowError.setOnClickListener {
             findNavController().popBackStack()
         }
 
         binding.cancelReservationButton.setOnClickListener {
             viewModel.onCancelBookingClicked(eventId)
         }
+
+        binding.backButtonError.setOnClickListener {
+            findNavController().popBackStack()
+        }
+
+        binding.retryButton.setOnClickListener {
+            viewModel.onRetry(eventId)
+        }
     }
 
     private fun setupObservers() {
         viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
-            binding.loadingSpinner.isVisible = isLoading
+            binding.loadingSpinner.isVisible = isLoading && (viewModel.networkError.value == false)
             binding.cancelReservationButton.isEnabled = !isLoading
         }
 
         viewModel.eventDetails.observe(viewLifecycleOwner) { details ->
+            binding.contentGroup.isVisible = details != null
             details?.let {
                 val event = it.event
                 val venue = it.venue
 
                 binding.eventTitle.text = event.name
                 binding.sportName.text = event.sport
-                binding.eventDate.text = event.start_time?.let { date -> dateFormat.format(date) }
+                binding.eventDate.text = event.start_time?.let { date -> dateFormat.format(date) } ?: "N/A"
                 binding.eventTime.text = event.start_time?.let { date ->
                     val startTime = timeFormat.format(date)
-                    "$startTime - 2 hours"
-                }
+                    "$startTime - 2 hours" // Placeholder
+                } ?: ""
                 binding.locationName.text = venue?.name ?: "Ubicación no disponible"
-                binding.participantsCount.text = "${event.booked} / ${event.max_capacity} participants"
+                binding.participantsCount.text = "${event.booked}/${event.max_capacity} participants"
                 binding.participantsProgress.max = event.max_capacity
                 binding.participantsProgress.progress = event.booked
                 binding.eventDescription.text = event.description
@@ -88,6 +100,12 @@ class BookedEventDetailFragment : Fragment() {
                 Toast.makeText(context, it, Toast.LENGTH_LONG).show()
                 viewModel.onErrorShown()
             }
+        }
+
+        viewModel.networkError.observe(viewLifecycleOwner) { hasError ->
+            binding.connectionErrorLayout.isVisible = hasError
+            binding.contentGroup.isVisible = !hasError
+            binding.cancelReservationButton.isVisible = !hasError
         }
 
         viewModel.cancellationSuccess.observe(viewLifecycleOwner) { hasSucceeded ->
