@@ -21,7 +21,6 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
 
     private val serviceAdapter = ProfileServiceAdapter()
     private val authRepository = AuthRepository()
-    // AÑADIDO: Instancia del repositorio de eventos
     private val eventRepository = EventRepository(application)
 
     private val _user = MutableLiveData<User?>()
@@ -39,7 +38,6 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     private val _upcomingEvents = MutableLiveData<List<Event>>()
     val upcomingEvents: LiveData<List<Event>> = _upcomingEvents
 
-    // AÑADIDO: LiveData para los eventos publicados por el usuario
     private val _postedEvents = MutableLiveData<List<Event>>()
     val postedEvents: LiveData<List<Event>> = _postedEvents
 
@@ -58,7 +56,6 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         loadProfileImage(currentUserId)
         loadUpcomingEvents(currentUserId)
 
-        // AÑADIDO: Cargar los eventos creados por el usuario
         loadPostedEvents(currentUserId)
 
         viewModelScope.launch {
@@ -84,19 +81,17 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
 
     private fun loadUpcomingEvents(userId: String) {
         viewModelScope.launch {
-            // Nota: Asumo que getUpcomingBookedEvents maneja sus propios errores o retorna lista vacía
             try {
                 val events = withContext(Dispatchers.IO) {
                     serviceAdapter.getUpcomingBookedEvents(userId)
                 }
                 _upcomingEvents.postValue(events)
             } catch (e: Exception) {
-                // Opcional: manejar error de upcoming events
+
             }
         }
     }
 
-    // AÑADIDO: Función para cargar eventos publicados desde el repositorio
     private fun loadPostedEvents(userId: String) {
         viewModelScope.launch {
             val result = eventRepository.getPostedEvents(userId)
